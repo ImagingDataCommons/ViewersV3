@@ -73,6 +73,7 @@ export default function hydrateStructuredReport(
   );
 
   const sopInstanceUIDToImageId = {};
+  const sopInstanceUIDToSCOORD3DId = {};
   const imageIdsForToolState = {};
 
   displaySet.measurements.forEach(measurement => {
@@ -80,6 +81,9 @@ export default function hydrateStructuredReport(
 
     if (!sopInstanceUIDToImageId[ReferencedSOPInstanceUID]) {
       sopInstanceUIDToImageId[ReferencedSOPInstanceUID] = imageId;
+      if (measurement.SCOORD3DUID) {
+        sopInstanceUIDToSCOORD3DId[ReferencedSOPInstanceUID] = measurement.SCOORD3DUID;
+      }
       imageIdsForToolState[ReferencedSOPInstanceUID] = [];
     }
     if (!imageIdsForToolState[ReferencedSOPInstanceUID][frameNumber]) {
@@ -184,6 +188,10 @@ export default function hydrateStructuredReport(
           FrameOfReferenceUID,
         },
       };
+
+      if (sopInstanceUIDToSCOORD3DId[toolData.sopInstanceUid]) {
+        annotation.data.SCOORD3DId = sopInstanceUIDToSCOORD3DId[toolData.sopInstanceUid];
+      }
 
       const source = measurementService.getSource(
         CORNERSTONE_3D_TOOLS_SOURCE_NAME,

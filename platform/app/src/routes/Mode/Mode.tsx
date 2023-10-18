@@ -49,7 +49,7 @@ function defaultRouteInit(
         issuedWarningSeries.push(seriesInstanceUIDs[0]);
         uiNotificationService.show({
           title: 'Series filter',
-          message: `Each of the series in filter: ${seriesInstanceUIDs} are not part of the current study. The entire study is being displayed`,
+          message: `The series filter ${seriesInstanceUIDs} was not used on "${seriesMetadata.instances[0]?.clientName}". All the study series retrieved from "${seriesMetadata.instances[0]?.clientName}" are being displayed`,
           type: 'error',
           duration: 7000,
         });
@@ -453,7 +453,7 @@ export default function ModeRoute({
     <ImageViewerProvider
       // initialState={{ StudyInstanceUIDs: StudyInstanceUIDs }}
       StudyInstanceUIDs={studyInstanceUIDs}
-    // reducer={reducer}
+      // reducer={reducer}
     >
       <CombinedContextProvider>
         <DragAndDropProvider>

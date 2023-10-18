@@ -44,7 +44,8 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.20.13",
-    "@cornerstonejs/tools": "^1.16.4",
+    "@cornerstonejs/adapters": "^1.20.3",
+    "@cornerstonejs/tools": "^1.20.3",
     "react-color": "^2.19.3"
   }
 }

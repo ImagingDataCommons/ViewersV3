@@ -45,6 +45,7 @@ function _getDisplaySetsFromSeries(instances, servicesManager, extensionManager)
     structureSet: null,
     sopClassUids,
     instance,
+    instances: [instance],
     wadoRoot,
     wadoUriRoot,
     wadoUri,

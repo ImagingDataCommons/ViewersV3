@@ -358,7 +358,7 @@ const connectMeasurementServiceToTools = (
       }
 
       const annotationManager = annotation.state.getAnnotationManager();
-      annotationManager.addAnnotation({
+      const newAnnotation = {
         annotationUID: measurement.uid,
         highlighted: false,
         isLocked: false,
@@ -369,13 +369,19 @@ const connectMeasurementServiceToTools = (
           referencedImageId: imageId,
         },
         data: {
+          ...data.annotation.data,
           text: data.annotation.data.text,
           handles: { ...data.annotation.data.handles },
           cachedStats: { ...data.annotation.data.cachedStats },
           label: data.annotation.data.label,
           frameNumber: frameNumber,
         },
-      });
+      };
+      if (data.annotation.data?.polyline) {
+        newAnnotation.data.polyline = data.annotation.data.polyline;
+      }
+
+      annotationManager.addAnnotation(newAnnotation);
     }
   );
 

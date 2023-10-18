@@ -439,7 +439,7 @@ function _mapDisplaySets(
       };
 
       if (componentType === 'thumbnailNoImage') {
-        if (dataSource.reject && dataSource.reject.series) {
+        if (dataSource.clientCanReject && dataSource.clientCanReject(ds.clientName)) {
           thumbnailProps.canReject = !ds?.unsupported;
           thumbnailProps.onReject = () => {
             uiDialogService.create({

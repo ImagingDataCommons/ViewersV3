@@ -1,5 +1,5 @@
-import { api } from 'dicomweb-client';
-import { DicomMetadataStore, IWebApiDataSource, utils, errorHandler, classes } from '@ohif/core';
+import { DicomMetadataStore, IWebApiDataSource, utils, classes } from '@ohif/core';
+import ClientManager from './utils/clientManager';
 
 import {
   mapParams,
@@ -8,12 +8,10 @@ import {
   processResults,
   processSeriesResults,
 } from './qido.js';
-import dcm4cheeReject from './dcm4cheeReject';
 
 import getImageId from './utils/getImageId';
 import dcmjs from 'dcmjs';
 import { retrieveStudyMetadata, deleteStudyMetadataPromise } from './retrieveStudyMetadata.js';
-import StaticWadoClient from './utils/StaticWadoClient';
 import getDirectURL from '../utils/getDirectURL';
 import { fixBulkDataURI } from './utils/fixBulkDataURI';
 
@@ -24,123 +22,147 @@ const { naturalizeDataset, denaturalizeDataset } = DicomMetaDictionary;
 const ImplementationClassUID = '2.25.270695996825855179949881587723571202391.2.0.0';
 const ImplementationVersionName = 'OHIF-VIEWER-2.0.0';
 const EXPLICIT_VR_LITTLE_ENDIAN = '1.2.840.10008.1.2.1';
+const STUDY_INSTANCE_UID = '0020000D';
+const SERIES_INSTANCE_UID = '0020000E';
+const NUMBER_STUDY_SERIES = '00201206';
+const NUMBER_STUDY_INSTANCES = '00201208';
 
 const metadataProvider = classes.MetadataProvider;
 
 /**
  *
- * @param {string} name - Data source name
- * @param {string} wadoUriRoot - Legacy? (potentially unused/replaced)
- * @param {string} qidoRoot - Base URL to use for QIDO requests
- * @param {string} wadoRoot - Base URL to use for WADO requests
- * @param {boolean} qidoSupportsIncludeField - Whether QIDO supports the "Include" option to request additional fields in response
- * @param {string} imageRengering - wadors | ? (unsure of where/how this is used)
- * @param {string} thumbnailRendering - wadors | ? (unsure of where/how this is used)
- * @param {bool} supportsReject - Whether the server supports reject calls (i.e. DCM4CHEE)
- * @param {bool} lazyLoadStudy - "enableStudyLazyLoad"; Request series meta async instead of blocking
- * @param {string|bool} singlepart - indicates of the retrieves can fetch singlepart.  Options are bulkdata, video, image or boolean true
+ * @param {Object} dicomWebConfig - dicomweb client configuration
+ * @param {Object} userAuthenticationService - service object responsible for user authentication
  */
 function createDicomWebApi(dicomWebConfig, userAuthenticationService) {
-  let dicomWebConfigCopy,
-    qidoConfig,
-    wadoConfig,
-    qidoDicomWebClient,
-    wadoDicomWebClient,
-    getAuthrorizationHeader,
-    generateWadoHeader;
-
+  let clientManager;
   const implementation = {
     initialize: ({ params, query }) => {
-      if (dicomWebConfig.onConfiguration && typeof dicomWebConfig.onConfiguration === 'function') {
-        dicomWebConfig = dicomWebConfig.onConfiguration(dicomWebConfig, {
-          params,
-          query,
-        });
-      }
-
-      dicomWebConfigCopy = JSON.parse(JSON.stringify(dicomWebConfig));
-
-      getAuthrorizationHeader = () => {
-        const xhrRequestHeaders = {};
-        const authHeaders = userAuthenticationService.getAuthorizationHeader();
-        if (authHeaders && authHeaders.Authorization) {
-          xhrRequestHeaders.Authorization = authHeaders.Authorization;
+      clientManager = new ClientManager({
+        params,
+        query,
+        dicomWebConfig,
+        userAuthenticationService,
+      });
+    },
+    /**
+     * returns a boolean indicating if a client has reject capabilities
+     * @param {*} clientName
+     * @returns {boolean}
+     */
+    clientCanReject: clientName => {
+      return clientManager.clientCanReject(clientName);
+    },
+    /**
+     * implements the series rejection. Only dcm4chee series rejection is
+     * supported for now
+     */
+    reject: {
+      series: (studyInstanceUID, seriesInstanceUID, clientName) => {
+        const rejectObject = clientManager.getClientReject(clientName);
+        if (rejectObject) {
+          return rejectObject.series(studyInstanceUID, seriesInstanceUID);
         }
-        return xhrRequestHeaders;
-      };
-
-      generateWadoHeader = () => {
-        let authorizationHeader = getAuthrorizationHeader();
-        //Generate accept header depending on config params
-        let formattedAcceptHeader = utils.generateAcceptHeader(
-          dicomWebConfig.acceptHeader,
-          dicomWebConfig.requestTransferSyntaxUID,
-          dicomWebConfig.omitQuotationForMultipartRequest
-        );
-
-        return {
-          ...authorizationHeader,
-          Accept: formattedAcceptHeader,
-        };
-      };
-
-      qidoConfig = {
-        url: dicomWebConfig.qidoRoot,
-        staticWado: dicomWebConfig.staticWado,
-        singlepart: dicomWebConfig.singlepart,
-        headers: userAuthenticationService.getAuthorizationHeader(),
-        errorInterceptor: errorHandler.getHTTPErrorHandler(),
-      };
-
-      wadoConfig = {
-        url: dicomWebConfig.wadoRoot,
-        staticWado: dicomWebConfig.staticWado,
-        singlepart: dicomWebConfig.singlepart,
-        headers: userAuthenticationService.getAuthorizationHeader(),
-        errorInterceptor: errorHandler.getHTTPErrorHandler(),
-      };
-
-      // TODO -> Two clients sucks, but its better than 1000.
-      // TODO -> We'll need to merge auth later.
-      qidoDicomWebClient = dicomWebConfig.staticWado
-        ? new StaticWadoClient(qidoConfig)
-        : new api.DICOMwebClient(qidoConfig);
-
-      wadoDicomWebClient = dicomWebConfig.staticWado
-        ? new StaticWadoClient(wadoConfig)
-        : new api.DICOMwebClient(wadoConfig);
+      },
     },
     query: {
       studies: {
         mapParams: mapParams.bind(),
         search: async function (origParams) {
-          qidoDicomWebClient.headers = getAuthrorizationHeader();
-          const { studyInstanceUid, seriesInstanceUid, ...mappedParams } =
-            mapParams(origParams, {
-              supportsFuzzyMatching: dicomWebConfig.supportsFuzzyMatching,
-              supportsWildcard: dicomWebConfig.supportsWildcard,
-            }) || {};
+          const clients = clientManager.getClientsForQidoRequests();
+          // concatenate series metadata from all servers
+          const clientResultsPromises = clients.map(client => {
+            const { studyInstanceUid, seriesInstanceUid, ...mappedParams } =
+              mapParams(origParams, {
+                supportsFuzzyMatching: client.supportsFuzzyMatching,
+                supportsWildcard: client.supportsWildcard,
+              }) || {};
+            let clientResults;
+            try {
+              clientResults = qidoSearch(
+                client.qidoDicomWebClient,
+                undefined,
+                undefined,
+                mappedParams
+              );
+            } catch {
+              clientResults = [];
+            }
+            return clientResults;
+          });
+          await Promise.allSettled(clientResultsPromises);
 
-          const results = await qidoSearch(qidoDicomWebClient, undefined, undefined, mappedParams);
-
+          let results = [];
+          const studyInstanceUIDs = {};
+          // here remove duplicate studies
+          await clientResultsPromises.forEach(async clientResultPromise => {
+            let clientResults;
+            try {
+              clientResults = await clientResultPromise;
+            } catch {
+              clientResults = [];
+            }
+            clientResults.forEach(clientResult => {
+              const studyInstanceUID = clientResult[STUDY_INSTANCE_UID].Value[0];
+              if (!(studyInstanceUID in studyInstanceUIDs)) {
+                studyInstanceUIDs[studyInstanceUID] = clientResult;
+                results.push(clientResult);
+              }
+            });
+          });
           return processResults(results);
         },
         processResults: processResults.bind(),
       },
       series: {
-        // mapParams: mapParams.bind(),
         search: async function (studyInstanceUid) {
-          qidoDicomWebClient.headers = getAuthrorizationHeader();
-          const results = await seriesInStudy(qidoDicomWebClient, studyInstanceUid);
+          const clients = clientManager.getClientsForQidoRequests();
+          // concatenate series metadata from all servers
+          const clientResultsPromises = clients.map(client => {
+            let clientResults;
+            try {
+              clientResults = seriesInStudy(client.qidoDicomWebClient, studyInstanceUid);
+            } catch {
+              clientResults = [];
+            }
+            return clientResults;
+          });
+          await Promise.allSettled(clientResultsPromises);
+          let results = [];
+          const seriesInstanceUIDs = [];
 
+          // remove duplicate series in results
+          await clientResultsPromises.forEach(async clientResultPromise => {
+            let clientResults;
+            try {
+              clientResults = await clientResultPromise;
+            } catch {
+              clientResults = [];
+            }
+            clientResults.forEach(clientResult => {
+              const seriesInstanceUID = clientResult[SERIES_INSTANCE_UID].Value[0];
+              if (!seriesInstanceUIDs.includes(seriesInstanceUID)) {
+                seriesInstanceUIDs.push(seriesInstanceUID);
+                results.push(clientResult);
+              }
+            });
+          });
           return processSeriesResults(results);
         },
-        // processResults: processResults.bind(),
       },
       instances: {
         search: (studyInstanceUid, queryParameters) => {
-          qidoDicomWebClient.headers = getAuthrorizationHeader();
-          qidoSearch.call(undefined, qidoDicomWebClient, studyInstanceUid, null, queryParameters);
+          const clients = clientManager.getClientsForQidoRequests();
+          // concatenate instance metadata from all servers
+          for (let i = 0; i < clients.length; i++) {
+            qidoSearch.call(
+              undefined,
+              clients[i].qidoDicomWebClient,
+              studyInstanceUid,
+              null,
+              queryParameters
+            );
+          }
         },
       },
     },
@@ -149,33 +171,33 @@ function createDicomWebApi(dicomWebConfig, userAuthenticationService) {
        * Generates a URL that can be used for direct retrieve of the bulkdata
        *
        * @param {object} params
-       * @param {string} params.tag is the tag name of the URL to retrieve
-       * @param {object} params.instance is the instance object that the tag is in
-       * @param {string} params.defaultType is the mime type of the response
-       * @param {string} params.singlepart is the type of the part to retrieve
        * @returns an absolute URL to the resource, if the absolute URL can be retrieved as singlepart,
        *    or is already retrieved, or a promise to a URL for such use if a BulkDataURI
        */
       directURL: params => {
+        const client = clientManager.getClient(params?.instance?.clientName);
         return getDirectURL(
           {
-            wadoRoot: dicomWebConfig.wadoRoot,
-            singlepart: dicomWebConfig.singlepart,
+            wadoRoot: client.wadoRoot,
+            singlepart: client.singlepart,
           },
           params
         );
       },
-      bulkDataURI: async ({ StudyInstanceUID, BulkDataURI }) => {
-        qidoDicomWebClient.headers = getAuthrorizationHeader();
+      bulkDataURI: async ({ StudyInstanceUID, BulkDataURI, clientName }) => {
+        clientManager.setQidoHeaders();
         const options = {
           multipart: false,
           BulkDataURI,
           StudyInstanceUID,
         };
-        return qidoDicomWebClient.retrieveBulkData(options).then(val => {
-          const ret = (val && val[0]) || undefined;
-          return ret;
-        });
+        return clientManager
+          .getQidoClient(clientName)
+          .retrieveBulkData(options)
+          .then(val => {
+            const ret = (val && val[0]) || undefined;
+            return ret;
+          });
       },
       series: {
         metadata: async ({
@@ -189,7 +211,7 @@ function createDicomWebApi(dicomWebConfig, userAuthenticationService) {
             throw new Error('Unable to query for SeriesMetadata without StudyInstanceUID');
           }
 
-          if (dicomWebConfig.enableStudyLazyLoad) {
+          if (clientManager.getClient().enableStudyLazyLoad) {
             return implementation._retrieveSeriesMetadataAsync(
               StudyInstanceUID,
               filters,
@@ -212,13 +234,14 @@ function createDicomWebApi(dicomWebConfig, userAuthenticationService) {
 
     store: {
       dicom: async (dataset, request) => {
-        wadoDicomWebClient.headers = getAuthrorizationHeader();
+        clientManager.setAuthorizationHeadersForWADO();
+        const clientName = dataset?.clientName;
+        let options;
         if (dataset instanceof ArrayBuffer) {
-          const options = {
+          options = {
             datasets: [dataset],
             request,
           };
-          await wadoDicomWebClient.storeInstances(options);
         } else {
           const meta = {
             FileMetaInformationVersion: dataset._meta?.FileMetaInformationVersion?.Value,
@@ -236,13 +259,12 @@ function createDicomWebApi(dicomWebConfig, userAuthenticationService) {
 
           const part10Buffer = dicomDict.write();
 
-          const options = {
+          options = {
             datasets: [part10Buffer],
             request,
           };
-
-          await wadoDicomWebClient.storeInstances(options);
         }
+        await clientManager.getWadoClient(clientName).storeInstances(options);
       },
     },
 
@@ -254,19 +276,43 @@ function createDicomWebApi(dicomWebConfig, userAuthenticationService) {
       madeInClient
     ) => {
       const enableStudyLazyLoad = false;
-      wadoDicomWebClient.headers = generateWadoHeader();
-      // data is all SOPInstanceUIDs
-      const data = await retrieveStudyMetadata(
-        wadoDicomWebClient,
-        StudyInstanceUID,
-        enableStudyLazyLoad,
-        filters,
-        sortCriteria,
-        sortFunction
-      );
+      const clients = clientManager.getClientsForWadoRequests();
 
-      // first naturalize the data
-      const naturalizedInstancesMetadata = data.map(naturalizeDataset);
+      const naturalizedInstancesMetadata = [];
+      const seriesConcatenated = [];
+      // search and retrieve in all servers
+      for (let i = 0; i < clients.length; i++) {
+        const data = await retrieveStudyMetadata(
+          clients[i].wadoDicomWebClient,
+          StudyInstanceUID,
+          enableStudyLazyLoad,
+          filters,
+          sortCriteria,
+          sortFunction
+        );
+        const newSeries = [];
+        // attach the client Name in each metadata
+        const clientNaturalizedInstancesMetadata = data.map(item => {
+          const converted = naturalizeDataset(item);
+          if (
+            !seriesConcatenated.includes(converted.SeriesInstanceUID) &&
+            !newSeries.includes(converted.SeriesInstanceUID)
+          ) {
+            newSeries.push(converted.SeriesInstanceUID);
+          }
+          converted.clientName = clients[i].name;
+          return converted;
+        });
+
+        // adding only instances belonging to new series
+        clientNaturalizedInstancesMetadata.forEach(item => {
+          if (newSeries.includes(item.SeriesInstanceUID)) {
+            naturalizedInstancesMetadata.push(item);
+          }
+        });
+        // adding new series
+        newSeries.forEach(seriesUID => seriesConcatenated.push(seriesUID));
+      }
 
       const seriesSummaryMetadata = {};
       const instancesPerSeries = {};
@@ -324,29 +370,56 @@ function createDicomWebApi(dicomWebConfig, userAuthenticationService) {
       madeInClient = false
     ) => {
       const enableStudyLazyLoad = true;
-      wadoDicomWebClient.headers = generateWadoHeader();
+      const clients = clientManager.getClientsForWadoRequests();
       // Get Series
-      const { preLoadData: seriesSummaryMetadata, promises: seriesPromises } =
-        await retrieveStudyMetadata(
-          wadoDicomWebClient,
-          StudyInstanceUID,
-          enableStudyLazyLoad,
-          filters,
-          sortCriteria,
-          sortFunction
-        );
+      let seriesSummaryMetadata = [];
+      let seriesPromises = [];
+      const seriesClientsMapping = {};
+      for (let i = 0; i < clients.length; i++) {
+        let clientSeriesSummaryMetadata, clientSeriesPromises;
+        try {
+          const { preLoadData, promises } = await retrieveStudyMetadata(
+            clients[i].wadoDicomWebClient,
+            StudyInstanceUID,
+            enableStudyLazyLoad,
+            filters,
+            sortCriteria,
+            sortFunction
+          );
+          clientSeriesSummaryMetadata = preLoadData;
+          clientSeriesPromises = promises;
+        } catch {
+          clientSeriesSummaryMetadata = [];
+          clientSeriesPromises = [];
+        }
+
+        // create a mapping between SeriesInstanceUID <--> clientName, for two reasons:
+        // 1 - remove duplicates in series metadata
+        // 2 - associate each instance in a series with the name of the client it was retrieved
+        for (let j = 0; j < clientSeriesSummaryMetadata.length; j++) {
+          if (!seriesClientsMapping[clientSeriesSummaryMetadata[j].SeriesInstanceUID]) {
+            seriesClientsMapping[clientSeriesSummaryMetadata[j].SeriesInstanceUID] =
+              clients[i].name;
+
+            seriesSummaryMetadata.push(clientSeriesSummaryMetadata[j]);
+            seriesPromises.push(clientSeriesPromises[j]);
+          }
+        }
+      }
 
       /**
-       * naturalizes the dataset, and adds a retrieve bulkdata method
+       * naturalizes the dataset, and adds a retrieve bulk data method
        * to any values containing BulkDataURI.
        * @param {*} instance
        * @returns naturalized dataset, with retrieveBulkData methods
        */
       const addRetrieveBulkData = instance => {
+        const clientName = instance?.clientName;
         const naturalized = naturalizeDataset(instance);
+        const client = clientManager.getClient(clientName);
 
         // if we know the server doesn't use bulkDataURI, then don't
-        if (!dicomWebConfig.bulkDataURI?.enabled) {
+        if (!client.bulkDataURI?.enabled) {
           return naturalized;
         }
 
@@ -359,7 +432,7 @@ function createDicomWebApi(dicomWebConfig, userAuthenticationService) {
             // Provide a method to fetch bulkdata
             value.retrieveBulkData = () => {
               // handle the scenarios where bulkDataURI is relative path
-              fixBulkDataURI(value, naturalized, dicomWebConfig);
+              fixBulkDataURI(value, naturalized, client);
 
               const options = {
                 // The bulkdata fetches work with either multipart or
@@ -374,16 +447,19 @@ function createDicomWebApi(dicomWebConfig, userAuthenticationService) {
                 StudyInstanceUID: naturalized.StudyInstanceUID,
               };
               // Todo: this needs to be from wado dicom web client
-              return qidoDicomWebClient.retrieveBulkData(options).then(val => {
-                // There are DICOM PDF cases where the first ArrayBuffer in the array is
-                // the bulk data and DICOM video cases where the second ArrayBuffer is
-                // the bulk data. Here we play it safe and do a find.
-                const ret =
-                  (val instanceof Array && val.find(arrayBuffer => arrayBuffer?.byteLength)) ||
-                  undefined;
-                value.Value = ret;
-                return ret;
-              });
+              return clientManager
+                .getQidoClient()
+                .retrieveBulkData(options)
+                .then(val => {
+                  // There are DICOM PDF cases where the first ArrayBuffer in the array is
+                  // the bulk data and DICOM video cases where the second ArrayBuffer is
+                  // the bulk data. Here we play it safe and do a find.
+                  const ret =
+                    (val instanceof Array && val.find(arrayBuffer => arrayBuffer?.byteLength)) ||
+                    undefined;
+                  value.Value = ret;
+                  return ret;
+                });
             };
           }
         });
@@ -391,13 +467,18 @@ function createDicomWebApi(dicomWebConfig, userAuthenticationService) {
       };
 
       // Async load series, store as retrieved
-      function storeInstances(instances) {
+      function storeInstances(instances, clientName) {
         const naturalizedInstances = instances.map(addRetrieveBulkData);
 
         // Adding instanceMetadata to OHIF MetadataProvider
+        const client = clientManager.getClient(clientName);
+        const wadoRoot = client.wadoRoot;
+        const wadoUri = client.wadoUri;
         naturalizedInstances.forEach((instance, index) => {
-          instance.wadoRoot = dicomWebConfig.wadoRoot;
-          instance.wadoUri = dicomWebConfig.wadoUri;
+          // attach client specific information in each instance
+          instance.wadoRoot = wadoRoot;
+          instance.wadoUri = wadoUri;
+          instance.clientName = clientName;
 
           const imageId = implementation.getImageIdsForInstance({
             instance,
@@ -436,7 +517,8 @@ function createDicomWebApi(dicomWebConfig, userAuthenticationService) {
 
       const seriesDeliveredPromises = seriesPromises.map(promise =>
         promise.then(instances => {
-          storeInstances(instances);
+          const clientName = seriesClientsMapping[instances[0][SERIES_INSTANCE_UID].Value[0]];
+          storeInstances(instances, clientName);
         })
       );
       await Promise.all(seriesDeliveredPromises);
@@ -474,12 +556,12 @@ function createDicomWebApi(dicomWebConfig, userAuthenticationService) {
       const imageIds = getImageId({
         instance,
         frame,
-        config: dicomWebConfig,
+        config: clientManager.getClient(instance?.clientName),
       });
       return imageIds;
     },
     getConfig() {
-      return dicomWebConfigCopy;
+      return clientManager?.getConfig();
     },
     getStudyInstanceUIDs({ params, query }) {
       const { StudyInstanceUIDs: paramsStudyInstanceUIDs } = params;
@@ -495,10 +577,6 @@ function createDicomWebApi(dicomWebConfig, userAuthenticationService) {
       return StudyInstanceUIDsAsArray;
     },
   };
-
-  if (dicomWebConfig.supportsReject) {
-    implementation.reject = dcm4cheeReject(dicomWebConfig.wadoRoot);
-  }
 
   return IWebApiDataSource.create(implementation);
 }

@@ -34,61 +34,51 @@ function SegmentationDropDownRow({
           e.stopPropagation();
         }}
       >
-        <Dropdown
-          id="segmentation-dropdown"
-          showDropdownIcon={false}
-          alignment="left"
-          itemsClassName="text-primary-active"
-          showBorders={false}
-          list={[
-            ...(!disableEditing
-              ? [
-                  {
-                    title: 'Add New Segmentation',
-                    onClick: () => {
-                      onSegmentationAdd();
-                    },
-                  },
-                ]
-              : []),
-            ...(!disableEditing
-              ? [
-                  {
-                    title: 'Rename',
-                    onClick: () => {
-                      onSegmentationEdit(activeSegmentation.id);
-                    },
-                  },
-                ]
-              : []),
-            {
-              title: 'Delete',
-              onClick: () => {
-                onSegmentationDelete(activeSegmentation.id);
+        {!disableEditing && (
+          <Dropdown
+            id="segmentation-dropdown"
+            showDropdownIcon={false}
+            alignment="left"
+            itemsClassName="text-primary-active"
+            showBorders={false}
+            list={[
+              {
+                title: 'Add New Segmentation',
+                onClick: () => {
+                  onSegmentationAdd();
+                },
               },
-            },
-            ...(!disableEditing
-              ? [
-                  {
-                    title: 'Export DICOM SEG',
-                    onClick: () => {
-                      storeSegmentation(activeSegmentation.id);
-                    },
-                  },
-                  {
-                    title: 'Download',
-                    onClick: () => {
-                      onSegmentationDownload(activeSegmentation.id);
-                    },
-                  },
-                ]
-              : []),
-          ]}
-        >
-          <div className="hover:bg-secondary-dark mx-1 grid h-[28px] w-[28px]  cursor-pointer place-items-center rounded-[4px]">
-            <Icon name="icon-more-menu"></Icon>
-          </div>
-        </Dropdown>
+              {
+                title: 'Rename',
+                onClick: () => {
+                  onSegmentationEdit(activeSegmentation.id);
+                },
+              },
+              {
+                title: 'Delete',
+                onClick: () => {
+                  onSegmentationDelete(activeSegmentation.id);
+                },
+              },
+              {
+                title: 'Export DICOM SEG',
+                onClick: () => {
+                  storeSegmentation(activeSegmentation.id);
+                },
+              },
+              {
+                title: 'Download',
+                onClick: () => {
+                  onSegmentationDownload(activeSegmentation.id);
+                },
+              },
+            ]}
+          >
+            <div className="hover:bg-secondary-dark mx-1 grid h-[28px] w-[28px]  cursor-pointer place-items-center rounded-[4px]">
+              <Icon name="icon-more-menu"></Icon>
+            </div>
+          </Dropdown>
+        )}
       </div>
       {selectOptions?.length && (
         <Select

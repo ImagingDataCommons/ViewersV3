@@ -28,7 +28,8 @@ function PanelMeasurementTableTracking({ servicesManager, extensionManager }) {
   const [viewportGrid] = useViewportGrid();
   const [measurementChangeTimestamp, setMeasurementsUpdated] = useState(Date.now().toString());
   const debouncedMeasurementChangeTimestamp = useDebounce(measurementChangeTimestamp, 200);
-  const { measurementService, uiDialogService, displaySetService } = servicesManager.services;
+  const { measurementService, uiDialogService, displaySetService, uiNotificationService } =
+    servicesManager.services;
   const [trackedMeasurements, sendTrackedMeasurementsEvent] = useTrackedMeasurements();
   const { trackedStudy, trackedSeries } = trackedMeasurements.context;
   const [displayStudySummary, setDisplayStudySummary] = useState(
@@ -40,12 +41,26 @@ function PanelMeasurementTableTracking({ servicesManager, extensionManager }) {
   useEffect(() => {
     const measurements = measurementService.getMeasurements();
     const filteredMeasurements = measurements.filter(
-      m => trackedStudy === m.referenceStudyUID && trackedSeries.includes(m.referenceSeriesUID)
+      m => trackedStudy === m.referenceStudyUID // && trackedSeries.includes(m.referenceSeriesUID)
     );
 
-    const mappedMeasurements = filteredMeasurements.map(m =>
+    const mappedMeasurementsWithDuplicates = filteredMeasurements.map(m =>
       _mapMeasurementToDisplay(m, measurementService.VALUE_TYPES, displaySetService)
     );
+    const scoord3dIds = [];
+    const mappedMeasurements = [];
+    mappedMeasurementsWithDuplicates.forEach(measurement => {
+      const SCOORD3DId = measurement.SCOORD3DId;
+      if (SCOORD3DId) {
+        if (!scoord3dIds.includes(SCOORD3DId)) {
+          mappedMeasurements.push(measurement);
+          scoord3dIds.push(SCOORD3DId);
+        }
+      } else {
+        mappedMeasurements.push(measurement);
+      }
+    });
+
     setDisplayMeasurements(mappedMeasurements);
     // eslint-ignore-next-line
   }, [measurementService, trackedStudy, trackedSeries, debouncedMeasurementChangeTimestamp]);
@@ -126,9 +141,34 @@ function PanelMeasurementTableTracking({ servicesManager, extensionManager }) {
   }
 
   const jumpToImage = ({ uid, isActive }) => {
-    measurementService.jumpToMeasurement(viewportGrid.activeViewportId, uid);
-
-    onMeasurementItemClickHandler({ uid, isActive });
+    const receivedMeasurement = measurementService.getMeasurement(uid);
+    if (receivedMeasurement?.SCOORD3DId) {
+      const SCOORD3DId = receivedMeasurement?.SCOORD3DId;
+      const activeViewport = viewportGrid.viewports.get(viewportGrid.activeViewportId);
+      const referenceDisplaySetUID = activeViewport.displaySetInstanceUIDs[0];
+      const measurements = measurementService.getMeasurements();
+      const activeViewportMeasurement = measurements.find(
+        measurement =>
+          measurement.displaySetInstanceUID === referenceDisplaySetUID &&
+          measurement.SCOORD3DId === SCOORD3DId
+      );
+      if (activeViewportMeasurement) {
+        uid = activeViewportMeasurement.uid;
+      } else {
+        uid = undefined;
+      }
+    }
+    if (uid) {
+      measurementService.jumpToMeasurement(viewportGrid.activeViewportId, uid);
+      onMeasurementItemClickHandler({ uid, isActive });
+    } else {
+      uiNotificationService.show({
+        title: 'Measurement Table',
+        message: 'Measurement not found for active viewport.',
+        type: 'error',
+        duration: 3000,
+      });
+    }
   };
 
   const onMeasurementItemEditHandler = ({ uid, isActive }) => {
@@ -300,11 +340,13 @@ function _mapMeasurementToDisplay(measurement, types, displaySetService) {
     selected,
     findingSites,
     finding,
+    SCOORD3DId,
   } = measurement;
 
   const firstSite = findingSites?.[0];
   const label = baseLabel || finding?.text || firstSite?.text || '(empty)';
   let displayText = baseDisplayText || [];
+  const oldDisplayText = baseDisplayText || [];
   if (findingSites) {
     const siteText = [];
     findingSites.forEach(site => {
@@ -312,10 +354,13 @@ function _mapMeasurementToDisplay(measurement, types, displaySetService) {
         siteText.push(site.text);
       }
     });
-    displayText = [...siteText, ...displayText];
+    displayText = [...siteText];
   }
   if (finding && finding?.text !== label) {
-    displayText = [finding.text, ...displayText];
+    displayText = [finding.text];
+  }
+  if (!SCOORD3DId) {
+    displayText = [...displayText, ...oldDisplayText];
   }
 
   return {
@@ -328,6 +373,7 @@ function _mapMeasurementToDisplay(measurement, types, displaySetService) {
     isActive: selected,
     finding,
     findingSites,
+    SCOORD3DId,
   };
 }
 

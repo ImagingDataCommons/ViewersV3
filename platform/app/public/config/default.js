@@ -1,7 +1,9 @@
 window.config = {
+  filterSRs: false,
+  disableEditing: true,
   routerBasename: '/',
   whiteLabeling: {
-    createLogoComponentFn: function(React) {
+    createLogoComponentFn: function (React) {
       return React.createElement(
         'a',
         {
@@ -50,8 +52,7 @@ window.config = {
   oidc: [
     {
       authority: 'https://accounts.google.com',
-      client_id:
-        '370953977065-o32uf5cn5f4bovtogdu862mlnhbcv9hk.apps.googleusercontent.com',
+      client_id: '298603720522-se7nikeuk7jdj2d7m6hv12idprt5o3jt.apps.googleusercontent.com',
       redirect_uri: '/callback',
       response_type: 'id_token token',
       scope:
@@ -95,93 +96,102 @@ window.config = {
       friendlyName: 'dcmjs DICOMWeb Server',
       namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
       sourceName: 'idc-dicomweb',
-      configuration: {
-        name: 'idc-dicomweb',
-        wadoUriRoot:
-          'https://proxy.imaging.datacommons.cancer.gov/current/viewer-only-no-downloads-see-tinyurl-dot-com-slash-3j3d9jyp/dicomWeb',
-        qidoRoot:
-          'https://proxy.imaging.datacommons.cancer.gov/current/viewer-only-no-downloads-see-tinyurl-dot-com-slash-3j3d9jyp/dicomWeb',
-        wadoRoot:
-          'https://proxy.imaging.datacommons.cancer.gov/current/viewer-only-no-downloads-see-tinyurl-dot-com-slash-3j3d9jyp/dicomWeb',
-        wadoUriRoot:
-          'https://testing-proxy.canceridc.dev/current/viewer-only-no-downloads-see-tinyurl-dot-com-slash-3j3d9jyp/dicomWeb',
-        qidoRoot:
-          'https://testing-proxy.canceridc.dev/current/viewer-only-no-downloads-see-tinyurl-dot-com-slash-3j3d9jyp/dicomWeb',
-        wadoRoot:
-          'https://testing-proxy.canceridc.dev/current/viewer-only-no-downloads-see-tinyurl-dot-com-slash-3j3d9jyp/dicomWeb',
-        qidoSupportsIncludeField: false,
-        supportsReject: false,
-        imageRendering: 'wadors',
-        thumbnailRendering: 'wadors',
-        enableStudyLazyLoad: true,
-        supportsFuzzyMatching: false,
-        supportsWildcard: false,
-        staticWado: true,
-        singlepart: 'bulkdata,video',
-        // whether the data source should use retrieveBulkData to grab metadata,
-        // and in case of relative path, what would it be relative to, options
-        // are in the series level or study level (some servers like series some study)
-        bulkDataURI: {
-          enabled: true,
-          relativeResolution: 'studies',
+      configuration: [
+        {
+          friendlyName: 'Primary IDC Server',
+          name: 'primary server',
+
+          wadoUriRoot:
+            'https://proxy.imaging.datacommons.cancer.gov/current/viewer-only-no-downloads-see-tinyurl-dot-com-slash-3j3d9jyp/dicomWeb',
+          qidoRoot:
+            'https://proxy.imaging.datacommons.cancer.gov/current/viewer-only-no-downloads-see-tinyurl-dot-com-slash-3j3d9jyp/dicomWeb',
+          wadoRoot:
+            'https://proxy.imaging.datacommons.cancer.gov/current/viewer-only-no-downloads-see-tinyurl-dot-com-slash-3j3d9jyp/dicomWeb',
+          wadoUriRoot:
+            'https://testing-proxy.canceridc.dev/current/viewer-only-no-downloads-see-tinyurl-dot-com-slash-3j3d9jyp/dicomWeb',
+          qidoRoot:
+            'https://testing-proxy.canceridc.dev/current/viewer-only-no-downloads-see-tinyurl-dot-com-slash-3j3d9jyp/dicomWeb',
+          wadoRoot:
+            'https://testing-proxy.canceridc.dev/current/viewer-only-no-downloads-see-tinyurl-dot-com-slash-3j3d9jyp/dicomWeb',
+          qidoSupportsIncludeField: false,
+          supportsReject: false,
+          imageRendering: 'wadors',
+          thumbnailRendering: 'wadors',
+          enableStudyLazyLoad: true,
+          supportsFuzzyMatching: false,
+          supportsWildcard: false,
+          staticWado: true,
+          singlepart: 'bulkdata,video',
+          omitQuotationForMultipartRequest: true,
         },
-        omitQuotationForMultipartRequest: true,
-      },
-    },
-    {
-      namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
-      sourceName: 'dicomweb',
-      configuration: {
-        friendlyName: 'AWS S3 Static wado server',
-        name: 'aws',
-        wadoUriRoot: 'https://d33do7qe4w26qo.cloudfront.net/dicomweb',
-        qidoRoot: 'https://d33do7qe4w26qo.cloudfront.net/dicomweb',
-        wadoRoot: 'https://d33do7qe4w26qo.cloudfront.net/dicomweb',
-        qidoSupportsIncludeField: false,
-        imageRendering: 'wadors',
-        thumbnailRendering: 'wadors',
-        enableStudyLazyLoad: true,
-        supportsFuzzyMatching: false,
-        supportsWildcard: true,
-        staticWado: true,
-        singlepart: 'bulkdata,video',
-        // whether the data source should use retrieveBulkData to grab metadata,
-        // and in case of relative path, what would it be relative to, options
-        // are in the series level or study level (some servers like series some study)
-        bulkDataURI: {
-          enabled: true,
-          relativeResolution: 'studies',
+        {
+          friendlyName: 'Secondary IDC Server',
+          name: 'secondary server',
+
+          qidoSupportsIncludeField: false,
+          supportsReject: false,
+          imageRendering: 'wadors',
+          thumbnailRendering: 'wadors',
+          enableStudyLazyLoad: true,
+          supportsFuzzyMatching: false,
+          supportsWildcard: false,
+          staticWado: true,
+          singlepart: 'bulkdata,video',
+          omitQuotationForMultipartRequest: true,
+          onConfiguration: (dicomWebConfig, options) => {
+            function parseGoogleServerParameter(param) {
+              // remove first slash
+              if (param[0] === '/') {
+                param = param.slice(1);
+              }
+              const tokens = param.split('/');
+              const params = {};
+
+              for (let i = 0; i < Math.floor(tokens.length / 2); i++) {
+                params[tokens[i * 2]] = tokens[i * 2 + 1];
+              }
+
+              if (params['projects']) {
+                params['project'] = params['projects'];
+              }
+              if (params['locations']) {
+                params['location'] = params['locations'];
+              }
+              if (params['datasets']) {
+                params['dataset'] = params['datasets'];
+              }
+              if (params['dicomStores']) {
+                params['dicomStore'] = params['dicomStores'];
+              }
+              return params;
+            }
+
+            const { query } = options;
+            const secondServer = query.get('secondGoogleServer');
+            if (secondServer) {
+              const { project, location, dataset, dicomStore } =
+                parseGoogleServerParameter(secondServer);
+              const pathUrl = `https://healthcare.googleapis.com/v1/projects/${project}/locations/${location}/datasets/${dataset}/dicomStores/${dicomStore}/dicomWeb`;
+              return {
+                ...dicomWebConfig,
+                wadoRoot: pathUrl,
+                qidoRoot: pathUrl,
+                wadoUri: pathUrl,
+                wadoUriRoot: pathUrl,
+                qidoSupportsIncludeField: false,
+                imageRendering: 'wadors',
+                thumbnailRendering: 'wadors',
+                enableStudyLazyLoad: true,
+                supportsFuzzyMatching: false,
+                supportsWildcard: false,
+                singlepart: 'bulkdata,video,pdf',
+                useBulkDataURI: false,
+                bulkDataURI: undefined,
+              };
+            }
+          },
         },
-        omitQuotationForMultipartRequest: true,
-      },
-    },
-    {
-      namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
-      sourceName: 'dicomweb2',
-      configuration: {
-        friendlyName: 'AWS S3 Static wado secondary server',
-        name: 'aws',
-        wadoUriRoot: 'https://d28o5kq0jsoob5.cloudfront.net/dicomweb',
-        qidoRoot: 'https://d28o5kq0jsoob5.cloudfront.net/dicomweb',
-        wadoRoot: 'https://d28o5kq0jsoob5.cloudfront.net/dicomweb',
-        qidoSupportsIncludeField: false,
-        supportsReject: false,
-        imageRendering: 'wadors',
-        thumbnailRendering: 'wadors',
-        enableStudyLazyLoad: true,
-        supportsFuzzyMatching: false,
-        supportsWildcard: true,
-        staticWado: true,
-        singlepart: 'bulkdata,video',
-        // whether the data source should use retrieveBulkData to grab metadata,
-        // and in case of relative path, what would it be relative to, options
-        // are in the series level or study level (some servers like series some study)
-        bulkDataURI: {
-          enabled: true,
-          relativeResolution: 'studies',
-        },
-        omitQuotationForMultipartRequest: true,
-      },
+      ],
     },
     {
       namespace: '@ohif/extension-default.dataSourcesModule.dicomwebproxy',

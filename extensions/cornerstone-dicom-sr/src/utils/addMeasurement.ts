@@ -73,6 +73,9 @@ export default function addMeasurement(measurement, imageId, displaySetInstanceU
   // It'd be super weird if it didn't anyway as a SCOORD.
   measurement.ReferencedSOPInstanceUID =
     measurement.coords[0].ReferencedSOPSequence.ReferencedSOPInstanceUID;
+  if (measurement.coords[0].ReferencedSOPSequence?.SCOORD3DUID) {
+    measurement.SCOORD3DUID = measurement.coords[0].ReferencedSOPSequence.SCOORD3DUID;
+  }
   measurement.frameNumber = frameNumber;
   delete measurement.coords;
 }

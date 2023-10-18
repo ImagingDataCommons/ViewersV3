@@ -58,6 +58,7 @@ const MEASUREMENT_SCHEMA_KEYS = [
   'longestDiameter',
   'cachedStats',
   'selected',
+  'text',
 ];
 
 const EVENTS = {
@@ -393,6 +394,9 @@ class MeasurementService extends PubSubService {
     try {
       measurement = toMeasurementSchema(data);
       measurement.source = source;
+      if (data.annotation.data?.SCOORD3DId) {
+        measurement.SCOORD3DId = data.annotation.data.SCOORD3DId;
+      }
     } catch (error) {
       log.warn(
         `Failed to map '${sourceInfo}' measurement for annotationType ${annotationType}:`,

@@ -155,9 +155,31 @@ function _load(displaySet, servicesManager, extensionManager) {
   const dataSources = extensionManager.getDataSources();
   const dataSource = dataSources[0];
 
+  const { customizationService } = servicesManager.services;
+
   const { ContentSequence } = displaySet.instance;
 
-  displaySet.referencedImages = _getReferencedImagesList(ContentSequence);
+  // get the dicomSRExtensionCustomizations object, if exists
+  const dicomSrExtensionCustomizations = customizationService.getModeCustomization(
+    'dicomSrExtensionCustomizations'
+  );
+
+  if (
+    dicomSrExtensionCustomizations?.convertAnnotations &&
+    typeof dicomSrExtensionCustomizations?.convertAnnotations === 'function'
+  ) {
+    const referencedImages = dicomSrExtensionCustomizations.convertAnnotations(
+      displaySet.instance,
+      displaySetService
+    );
+    if (referencedImages && referencedImages.length) {
+      displaySet.referencedImages = referencedImages;
+    }
+  }
+
+  if (!displaySet.referencedImages) {
+    displaySet.referencedImages = _getReferencedImagesList(ContentSequence);
+  }
   displaySet.measurements = _getMeasurements(ContentSequence);
 
   const mappings = measurementService.getSourceMappings(
