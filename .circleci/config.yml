@@ -7,7 +7,7 @@ commands:
           name: 'Set the Tier'
           command: |
             TIER=DEV
-            if [[ ${CIRCLE_BRANCH} =~ idc-v3-viewer-(prod|test).* ]]; then
+            if [[ ${CIRCLE_BRANCH} =~ idc-viewerv3-(prod|test).* ]]; then
               TIER=$(awk -F- '{print toupper($3)}' \<<< ${CIRCLE_BRANCH})
             fi
             echo "export TIER=${TIER}" >> $BASH_ENV
