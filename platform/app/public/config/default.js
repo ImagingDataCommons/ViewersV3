@@ -1,7 +1,7 @@
 window.config = {
   routerBasename: '/',
   whiteLabeling: {
-    createLogoComponentFn: function(React) {
+    createLogoComponentFn: function (React) {
       return React.createElement(
         'a',
         {
@@ -37,6 +37,7 @@ window.config = {
   },
   // filterQueryParam: false,
   defaultDataSourceName: 'idc-dicomweb',
+  defaultGCPDataSourceName: 'idc-gcp-dicomweb',
   /* Dynamic config allows user to pass "configUrl" query string this allows to load config without recompiling application. The regex will ensure valid configuration source */
   // dangerouslyUseDynamicConfig: {
   //   enabled: true,
@@ -50,8 +51,7 @@ window.config = {
   oidc: [
     {
       authority: 'https://accounts.google.com',
-      client_id:
-        '370953977065-o32uf5cn5f4bovtogdu862mlnhbcv9hk.apps.googleusercontent.com',
+      client_id: '370953977065-o32uf5cn5f4bovtogdu862mlnhbcv9hk.apps.googleusercontent.com',
       redirect_uri: '/callback',
       response_type: 'id_token token',
       scope:
@@ -64,11 +64,11 @@ window.config = {
   ],
   dataSources: [
     {
-      friendlyName: 'GCP DICOMWeb Server',
+      friendlyName: 'Primary GCP DICOMWeb Server',
       namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
-      sourceName: 'gcp-dicomweb',
+      sourceName: 'idc-gcp-dicomweb',
       configuration: {
-        name: 'gcp-dicomweb',
+        name: 'idc-gcp-dicomweb',
         qidoSupportsIncludeField: false,
         imageRendering: 'wadors',
         thumbnailRendering: 'wadors',
@@ -88,6 +88,52 @@ window.config = {
             wadoUri: pathUrl,
             wadoUriRoot: pathUrl,
           };
+        },
+      },
+    },
+    {
+      friendlyName: 'Secondary GCP DICOMWeb Server',
+      namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
+      sourceName: 'gcp',
+      configuration: {
+        name: 'gcp',
+        qidoSupportsIncludeField: false,
+        imageRendering: 'wadors',
+        thumbnailRendering: 'wadors',
+        enableStudyLazyLoad: true,
+        supportsFuzzyMatching: false,
+        supportsWildcard: false,
+        singlepart: 'bulkdata,video,pdf',
+        useBulkDataURI: false,
+        onConfiguration: (dicomWebConfig, options) => {
+          const extractParams = url => ({
+            project: url.split('projects/')[1].split('/')[0],
+            location: url.split('locations/')[1].split('/')[0],
+            dataset: url.split('datasets/')[1].split('/')[0],
+            dicomStore: url.split('dicomStores/')[1].split('/')[0],
+          });
+          const { query } = options;
+          const gcp = query.get('gcp');
+          if (gcp) {
+            const { project, location, dataset, dicomStore } = extractParams(gcp);
+            const pathUrl = `https://healthcare.googleapis.com/v1/projects/${project}/locations/${location}/datasets/${dataset}/dicomStores/${dicomStore}/dicomWeb`;
+            return {
+              ...dicomWebConfig,
+              wadoRoot: pathUrl,
+              qidoRoot: pathUrl,
+              wadoUri: pathUrl,
+              wadoUriRoot: pathUrl,
+              qidoSupportsIncludeField: false,
+              imageRendering: 'wadors',
+              thumbnailRendering: 'wadors',
+              enableStudyLazyLoad: true,
+              supportsFuzzyMatching: false,
+              supportsWildcard: false,
+              singlepart: 'bulkdata,video,pdf',
+              useBulkDataURI: false,
+              bulkDataURI: undefined,
+            };
+          }
         },
       },
     },
@@ -129,81 +175,11 @@ window.config = {
       },
     },
     {
-      namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
-      sourceName: 'dicomweb',
-      configuration: {
-        friendlyName: 'AWS S3 Static wado server',
-        name: 'aws',
-        wadoUriRoot: 'https://d33do7qe4w26qo.cloudfront.net/dicomweb',
-        qidoRoot: 'https://d33do7qe4w26qo.cloudfront.net/dicomweb',
-        wadoRoot: 'https://d33do7qe4w26qo.cloudfront.net/dicomweb',
-        qidoSupportsIncludeField: false,
-        imageRendering: 'wadors',
-        thumbnailRendering: 'wadors',
-        enableStudyLazyLoad: true,
-        supportsFuzzyMatching: false,
-        supportsWildcard: true,
-        staticWado: true,
-        singlepart: 'bulkdata,video',
-        // whether the data source should use retrieveBulkData to grab metadata,
-        // and in case of relative path, what would it be relative to, options
-        // are in the series level or study level (some servers like series some study)
-        bulkDataURI: {
-          enabled: true,
-          relativeResolution: 'studies',
-        },
-        omitQuotationForMultipartRequest: true,
-      },
-    },
-    {
-      namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
-      sourceName: 'dicomweb2',
-      configuration: {
-        friendlyName: 'AWS S3 Static wado secondary server',
-        name: 'aws',
-        wadoUriRoot: 'https://d28o5kq0jsoob5.cloudfront.net/dicomweb',
-        qidoRoot: 'https://d28o5kq0jsoob5.cloudfront.net/dicomweb',
-        wadoRoot: 'https://d28o5kq0jsoob5.cloudfront.net/dicomweb',
-        qidoSupportsIncludeField: false,
-        supportsReject: false,
-        imageRendering: 'wadors',
-        thumbnailRendering: 'wadors',
-        enableStudyLazyLoad: true,
-        supportsFuzzyMatching: false,
-        supportsWildcard: true,
-        staticWado: true,
-        singlepart: 'bulkdata,video',
-        // whether the data source should use retrieveBulkData to grab metadata,
-        // and in case of relative path, what would it be relative to, options
-        // are in the series level or study level (some servers like series some study)
-        bulkDataURI: {
-          enabled: true,
-          relativeResolution: 'studies',
-        },
-        omitQuotationForMultipartRequest: true,
-      },
-    },
-    {
       namespace: '@ohif/extension-default.dataSourcesModule.dicomwebproxy',
       sourceName: 'dicomwebproxy',
       configuration: {
         friendlyName: 'dicomweb delegating proxy',
         name: 'dicomwebproxy',
-      },
-    },
-    {
-      namespace: '@ohif/extension-default.dataSourcesModule.dicomjson',
-      sourceName: 'dicomjson',
-      configuration: {
-        friendlyName: 'dicom json',
-        name: 'json',
-      },
-    },
-    {
-      namespace: '@ohif/extension-default.dataSourcesModule.dicomlocal',
-      sourceName: 'dicomlocal',
-      configuration: {
-        friendlyName: 'dicom local',
       },
     },
   ],
@@ -214,25 +190,6 @@ window.config = {
     // Could use services manager here to bring up a dialog/modal if needed.
     console.warn('test, navigate to https://ohif.org/');
   },
-  // whiteLabeling: {
-  //   /* Optional: Should return a React component to be rendered in the "Logo" section of the application's Top Navigation bar */
-  //   createLogoComponentFn: function (React) {
-  //     return React.createElement(
-  //       'a',
-  //       {
-  //         target: '_self',
-  //         rel: 'noopener noreferrer',
-  //         className: 'text-purple-600 line-through',
-  //         href: '/',
-  //       },
-  //       React.createElement('img',
-  //         {
-  //           src: './assets/customLogo.svg',
-  //           className: 'w-8 h-8',
-  //         }
-  //       ))
-  //   },
-  // },
   hotkeys: [
     {
       commandName: 'incrementActiveViewport',
