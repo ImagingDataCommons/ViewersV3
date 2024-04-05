@@ -10,11 +10,11 @@ import {
   metaData,
   volumeLoader,
   imageLoadPoolManager,
+  getEnabledElement,
   Settings,
   utilities as csUtilities,
   Enums as csEnums,
 } from '@cornerstonejs/core';
-import { Enums } from '@cornerstonejs/tools';
 import { cornerstoneStreamingImageVolumeLoader } from '@cornerstonejs/streaming-image-volume-loader';
 
 import initWADOImageLoader from './initWADOImageLoader';
@@ -40,7 +40,6 @@ export default async function init({
   servicesManager,
   commandsManager,
   extensionManager,
-  configuration,
   appConfig,
 }: Types.Extensions.ExtensionParams): Promise<void> {
   // Note: this should run first before initializing the cornerstone
@@ -93,11 +92,25 @@ export default async function init({
     cineService,
     cornerstoneViewportService,
     hangingProtocolService,
-    toolGroupService,
     toolbarService,
     viewportGridService,
     stateSyncService,
+    segmentationService,
   } = servicesManager.services as CornerstoneServices;
+
+  toolbarService.registerEventForToolbarUpdate(cornerstoneViewportService, [
+    cornerstoneViewportService.EVENTS.VIEWPORT_DATA_CHANGED,
+  ]);
+
+  toolbarService.registerEventForToolbarUpdate(segmentationService, [
+    segmentationService.EVENTS.SEGMENTATION_ADDED,
+    segmentationService.EVENTS.SEGMENTATION_REMOVED,
+    segmentationService.EVENTS.SEGMENTATION_UPDATED,
+  ]);
+
+  toolbarService.registerEventForToolbarUpdate(eventTarget, [
+    cornerstoneTools.Enums.Events.TOOL_ACTIVATED,
+  ]);
 
   window.services = servicesManager.services;
   window.extensionManager = extensionManager;
@@ -123,6 +136,9 @@ export default async function init({
   // Stores a map from `lutPresentationId` to a Presentation object so that
   // an OHIFCornerstoneViewport can be redisplayed with the same LUT
   stateSyncService.register('lutPresentationStore', { clearOnModeExit: true });
+
+  // Stores synchronizers state to be restored
+  stateSyncService.register('synchronizersStore', { clearOnModeExit: true });
 
   // Stores a map from `positionPresentationId` to a Presentation object so that
   // an OHIFCornerstoneViewport can be redisplayed with the same position
@@ -199,6 +215,16 @@ export default async function init({
     }
   );
 
+  // resize the cornerstone viewport service when the grid size changes
+  // IMPORTANT: this should happen outside of the OHIFCornerstoneViewport
+  // since it will trigger a rerender of each viewport and each resizing
+  // the offscreen canvas which would result in a performance hit, this should
+  // done only once per grid resize here. Doing it once here, allows us to reduce
+  // the refreshRage(in ms) to 10 from 50. I tried with even 1 or 5 ms it worked fine
+  viewportGridService.subscribe(viewportGridService.EVENTS.GRID_SIZE_CHANGED, () => {
+    cornerstoneViewportService.resize(true);
+  });
+
   initContextMenu({
     cornerstoneViewportService,
     customizationService,
@@ -211,77 +237,12 @@ export default async function init({
   });
 
   /**
-   * When a viewport gets a new display set, this call will go through all the
-   * active tools in the toolbar, and call any commands registered in the
-   * toolbar service with a callback to re-enable on displaying the viewport.
-   */
-  const toolbarEventListener = evt => {
-    const { element } = evt.detail;
-    const activeTools = toolbarService.getActiveTools();
-
-    activeTools.forEach(tool => {
-      const toolData = toolbarService.getNestedButton(tool);
-      const commands = toolData?.listeners?.[evt.type];
-      commandsManager.run(commands, { element, evt });
-    });
-  };
-
-  /** Listens for active viewport events and fires the toolbar listeners */
-  const activeViewportEventListener = evt => {
-    const { viewportId } = evt;
-    const toolGroup = toolGroupService.getToolGroupForViewport(viewportId);
-
-    const activeTools = toolbarService.getActiveTools();
-
-    activeTools.forEach(tool => {
-      if (!toolGroup?._toolInstances?.[tool]) {
-        return;
-      }
-
-      // check if tool is active on the new viewport
-      const toolEnabled = toolGroup._toolInstances[tool].mode === Enums.ToolModes.Enabled;
-
-      if (!toolEnabled) {
-        return;
-      }
-
-      const button = toolbarService.getNestedButton(tool);
-      const commands = button?.listeners?.[evt.type];
-      commandsManager.run(commands, { viewportId, evt });
-    });
-  };
-
-  /**
    * Runs error handler for failed requests.
-   * @param event 
+   * @param event
    */
   const imageLoadFailedHandler = ({ detail }) => {
-    const handler = errorHandler.getHTTPErrorHandler()
+    const handler = errorHandler.getHTTPErrorHandler();
     handler(detail.error);
-  };
-
-  const resetCrosshairs = evt => {
-    const { element } = evt.detail;
-    const { viewportId, renderingEngineId } = cornerstone.getEnabledElement(element);
-
-    const toolGroup = cornerstoneTools.ToolGroupManager.getToolGroupForViewport(
-      viewportId,
-      renderingEngineId
-    );
-
-    if (!toolGroup || !toolGroup._toolInstances?.['Crosshairs']) {
-      return;
-    }
-
-    const mode = toolGroup._toolInstances['Crosshairs'].mode;
-
-    if (mode === Enums.ToolModes.Active) {
-      toolGroup.setToolActive('Crosshairs');
-    } else if (mode === Enums.ToolModes.Passive) {
-      toolGroup.setToolPassive('Crosshairs');
-    } else if (mode === Enums.ToolModes.Enabled) {
-      toolGroup.setToolEnabled('Crosshairs');
-    }
   };
 
   eventTarget.addEventListener(EVENTS.STACK_VIEWPORT_NEW_STACK, evt => {
@@ -290,21 +251,25 @@ export default async function init({
   });
   eventTarget.addEventListener(EVENTS.IMAGE_LOAD_FAILED, imageLoadFailedHandler);
   eventTarget.addEventListener(EVENTS.IMAGE_LOAD_ERROR, imageLoadFailedHandler);
-  
+
   function elementEnabledHandler(evt) {
     const { element } = evt.detail;
 
-    element.addEventListener(EVENTS.CAMERA_RESET, resetCrosshairs);
+    element.addEventListener(EVENTS.CAMERA_RESET, evt => {
+      const { element } = evt.detail;
+      const { viewportId } = getEnabledElement(element);
+      commandsManager.runCommand('resetCrosshairs', { viewportId });
+    });
 
-    eventTarget.addEventListener(EVENTS.STACK_VIEWPORT_NEW_STACK, toolbarEventListener);
+    // eventTarget.addEventListener(EVENTS.STACK_VIEWPORT_NEW_STACK, toolbarEventListener);
 
-    initViewTiming({ element, eventTarget });
+    initViewTiming({ element });
   }
 
   function elementDisabledHandler(evt) {
     const { element } = evt.detail;
 
-    element.removeEventListener(EVENTS.CAMERA_RESET, resetCrosshairs);
+    // element.removeEventListener(EVENTS.CAMERA_RESET, resetCrosshairs);
 
     // TODO - consider removing the callback when all elements are gone
     // eventTarget.removeEventListener(
@@ -317,10 +282,10 @@ export default async function init({
 
   eventTarget.addEventListener(EVENTS.ELEMENT_DISABLED, elementDisabledHandler.bind(null));
 
-  viewportGridService.subscribe(
-    viewportGridService.EVENTS.ACTIVE_VIEWPORT_ID_CHANGED,
-    activeViewportEventListener
-  );
+  // viewportGridService.subscribe(
+  //   viewportGridService.EVENTS.ACTIVE_VIEWPORT_ID_CHANGED,
+  //   activeViewportEventListener
+  // );
 }
 
 function CPUModal() {
