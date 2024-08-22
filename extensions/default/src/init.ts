@@ -2,6 +2,7 @@ import { DicomMetadataStore, classes } from '@ohif/core';
 import { calculateSUVScalingFactors } from '@cornerstonejs/calculate-suv';
 
 import getPTImageIdInstanceMetadata from './getPTImageIdInstanceMetadata';
+import { registerHangingProtocolAttributes } from './hangingprotocols';
 
 const metadataProvider = classes.MetadataProvider;
 
@@ -10,7 +11,11 @@ const metadataProvider = classes.MetadataProvider;
  * @param {Object} servicesManager
  * @param {Object} configuration
  */
-export default function init({ servicesManager, configuration = {}, commandsManager }): void {
+export default function init({
+  servicesManager,
+  configuration = {},
+  commandsManager,
+}: withAppTypes): void {
   const { stateSyncService, toolbarService, cineService, viewportGridService } =
     servicesManager.services;
 
@@ -56,6 +61,9 @@ export default function init({ servicesManager, configuration = {}, commandsMana
   // afterwards.
   stateSyncService.register('viewportsByPosition', { clearOnModeExit: true });
 
+  // Adds extra custom attributes for use by hanging protocols
+  registerHangingProtocolAttributes({ servicesManager });
+
   // Function to process and subscribe to events for a given set of commands and listeners
   const subscribeToEvents = listeners => {
     Object.entries(listeners).forEach(([event, commands]) => {
@@ -77,7 +85,7 @@ export default function init({ servicesManager, configuration = {}, commandsMana
   toolbarService.subscribe(toolbarService.EVENTS.TOOL_BAR_MODIFIED, state => {
     const { buttons } = state;
     for (const [id, button] of Object.entries(buttons)) {
-      const { groupId, items, listeners } = button.props;
+      const { groupId, items, listeners } = button.props || {};
 
       // Handle group items' listeners
       if (groupId && items) {

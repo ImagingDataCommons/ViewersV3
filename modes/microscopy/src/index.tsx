@@ -47,14 +47,14 @@ function modeFactory({ modeConfiguration }) {
     /**
      * Lifecycle hooks
      */
-    onModeEnter: ({ servicesManager, extensionManager, commandsManager }) => {
+    onModeEnter: ({ servicesManager, extensionManager, commandsManager }: withAppTypes) => {
       const { toolbarService } = servicesManager.services;
 
       toolbarService.addButtons(toolbarButtons);
-      toolbarService.createButtonSection('primary', ['MeasurementTools', 'dragPan']);
+      toolbarService.createButtonSection('primary', ['MeasurementTools', 'dragPan', 'TagBrowser']);
     },
 
-    onModeExit: ({ servicesManager }) => {
+    onModeExit: ({ servicesManager }: withAppTypes) => {
       const { toolbarService, uiDialogService, uiModalService } = servicesManager.services;
 
       uiDialogService.dismissAll();
@@ -87,8 +87,8 @@ function modeFactory({ modeConfiguration }) {
             id: ohif.layout,
             props: {
               leftPanels: [ohif.leftPanel],
-              leftPanelDefaultClosed: true, // we have problem with rendering thumbnails for microscopy images
-              rightPanelDefaultClosed: true, // we do not have the save microscopy measurements yet
+              leftPanelClosed: true, // we have problem with rendering thumbnails for microscopy images
+              rightPanelClosed: true, // we do not have the save microscopy measurements yet
               rightPanels: ['@ohif/extension-dicom-microscopy.panelModule.measure'],
               viewports: [
                 {
@@ -113,7 +113,6 @@ function modeFactory({ modeConfiguration }) {
       },
     ],
     extensions: extensionDependencies,
-    hangingProtocols: [ohif.hangingProtocols],
     hangingProtocol: ['default'],
 
     // Order is important in sop class handlers when two handlers both use

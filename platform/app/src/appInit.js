@@ -2,6 +2,7 @@ import {
   CommandsManager,
   ExtensionManager,
   ServicesManager,
+  ServiceProvidersManager,
   HotkeysManager,
   UINotificationService,
   UIModalService,
@@ -18,10 +19,12 @@ import {
   errorHandler,
   CustomizationService,
   PanelService,
+  WorkflowStepsService,
+  StudyPrefetcherService,
   // utils,
 } from '@ohif/core';
 
-import loadModules from './pluginImports';
+import loadModules, { loadModule as peerImport } from './pluginImports';
 
 /**
  * @param {object|func} appConfigOrFunc - application configuration, or a function that returns application configuration
@@ -34,17 +37,21 @@ async function appInit(appConfigOrFunc, defaultExtensions, defaultModes) {
 
   const commandsManager = new CommandsManager(commandsManagerConfig);
   const servicesManager = new ServicesManager(commandsManager);
+  const serviceProvidersManager = new ServiceProvidersManager();
   const hotkeysManager = new HotkeysManager(commandsManager, servicesManager);
 
   const appConfig = {
     ...(typeof appConfigOrFunc === 'function'
-      ? await appConfigOrFunc({ servicesManager })
+      ? await appConfigOrFunc({ servicesManager, peerImport })
       : appConfigOrFunc),
   };
+  // Default the peer import function
+  appConfig.peerImport ||= peerImport;
 
   const extensionManager = new ExtensionManager({
     commandsManager,
     servicesManager,
+    serviceProvidersManager,
     hotkeysManager,
     appConfig,
   });
@@ -65,7 +72,9 @@ async function appInit(appConfigOrFunc, defaultExtensions, defaultModes) {
     CineService.REGISTRATION,
     UserAuthenticationService.REGISTRATION,
     PanelService.REGISTRATION,
+    WorkflowStepsService.REGISTRATION,
     StateSyncService.REGISTRATION,
+    [StudyPrefetcherService.REGISTRATION, appConfig.studyPrefetcher],
   ]);
 
   errorHandler.getHTTPErrorHandler = () => {
@@ -108,7 +117,7 @@ async function appInit(appConfigOrFunc, defaultExtensions, defaultModes) {
           ? appConfig.modesConfiguration[id]
           : {};
 
-      mode = mode.modeFactory({ modeConfiguration });
+      mode = await mode.modeFactory({ modeConfiguration, loadModules });
     }
 
     if (modesById.has(id)) {
@@ -130,6 +139,7 @@ async function appInit(appConfigOrFunc, defaultExtensions, defaultModes) {
     commandsManager,
     extensionManager,
     servicesManager,
+    serviceProvidersManager,
     hotkeysManager,
   };
 }

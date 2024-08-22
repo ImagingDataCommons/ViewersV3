@@ -1,8 +1,9 @@
 import { SOPClassHandlerName, SOPClassHandlerId } from './id';
 import { utils, classes, DisplaySetService, Types } from '@ohif/core';
-import addMeasurement from './utils/addMeasurement';
+import addDICOMSRDisplayAnnotation from './utils/addDICOMSRDisplayAnnotation';
 import isRehydratable from './utils/isRehydratable';
 import { adaptersSR } from '@cornerstonejs/adapters';
+import CodeNameCodeSequenceValues from './constants/CodeNameCodeSequenceValues';
 
 type InstanceMetadata = Types.InstanceMetadata;
 
@@ -16,10 +17,11 @@ const { ImageSet, MetadataProvider: metadataProvider } = classes;
 // Get stacks from referenced displayInstanceUID and load into wrapped CornerStone viewport.
 
 const sopClassUids = [
-  '1.2.840.10008.5.1.4.1.1.88.11', //BASIC_TEXT_SR:
-  '1.2.840.10008.5.1.4.1.1.88.22', //ENHANCED_SR:
-  '1.2.840.10008.5.1.4.1.1.88.33', //COMPREHENSIVE_SR:
-  '1.2.840.10008.5.1.4.1.1.88.34', //COMPREHENSIVE_3D_SR:
+  '1.2.840.10008.5.1.4.1.1.88.11', // BASIC TEXT SR
+  '1.2.840.10008.5.1.4.1.1.88.22', // ENHANCED SR
+  '1.2.840.10008.5.1.4.1.1.88.33', // COMPREHENSIVE SR
+  '1.2.840.10008.5.1.4.1.1.88.34', // Comprehensive 3D SR
+  // '1.2.840.10008.5.1.4.1.1.88.50', // Mammography CAD SR
 ];
 
 const CORNERSTONE_3D_TOOLS_SOURCE_NAME = 'Cornerstone3DTools';
@@ -32,19 +34,6 @@ const validateSameStudyUID = (uid: string, instances): void => {
       throw new Error(`Instances ${it.SOPInstanceUID} does not belong to ${uid}`);
     }
   });
-};
-
-const CodeNameCodeSequenceValues = {
-  ImagingMeasurementReport: '126000',
-  ImageLibrary: '111028',
-  ImagingMeasurements: '126010',
-  MeasurementGroup: '125007',
-  ImageLibraryGroup: '126200',
-  TrackingUniqueIdentifier: '112040',
-  TrackingIdentifier: '112039',
-  Finding: '121071',
-  FindingSite: 'G-C0E3', // SRT
-  CornerstoneFreeText: Cornerstone3DCodeScheme.codeValues.CORNERSTONEFREETEXT, //
 };
 
 const CodingSchemeDesignators = {
@@ -85,7 +74,11 @@ function addInstances(instances: InstanceMetadata[], displaySetService: DisplayS
  * @param servicesManager is the services that can be used for creating
  * @returns The list of display sets created for the given instances object
  */
-function _getDisplaySetsFromSeries(instances, servicesManager, extensionManager) {
+function _getDisplaySetsFromSeries(
+  instances,
+  servicesManager: AppTypes.ServicesManager,
+  extensionManager
+) {
   // If the series has no instances, stop here
   if (!instances || !instances.length) {
     throw new Error('No instances were provided');
@@ -109,22 +102,10 @@ function _getDisplaySetsFromSeries(instances, servicesManager, extensionManager)
   } = instance;
   validateSameStudyUID(instance.StudyInstanceUID, instances);
 
-  if (
-    !ConceptNameCodeSequence ||
-    ConceptNameCodeSequence.CodeValue !== CodeNameCodeSequenceValues.ImagingMeasurementReport
-  ) {
-    servicesManager.services.uiNotificationService.show({
-      title: 'DICOM SR',
-      message:
-        'OHIF only supports TID1500 Imaging Measurement Report Structured Reports. The SR you’re trying to view is not supported.',
-      type: 'warning',
-      duration: 6000,
-    });
-    return [];
-  }
+  const isImagingMeasurementReport =
+    ConceptNameCodeSequence?.CodeValue === CodeNameCodeSequenceValues.ImagingMeasurementReport;
 
   const displaySet = {
-    //plugin: id,
     Modality: 'SR',
     displaySetInstanceUID: utils.guid(),
     SeriesDescription,
@@ -140,6 +121,7 @@ function _getDisplaySetsFromSeries(instances, servicesManager, extensionManager)
     measurements: null,
     isDerivedDisplaySet: true,
     isLoaded: false,
+    isImagingMeasurementReport,
     sopClassUids,
     instance,
     addInstances,
@@ -150,15 +132,43 @@ function _getDisplaySetsFromSeries(instances, servicesManager, extensionManager)
   return [displaySet];
 }
 
-function _load(displaySet, servicesManager, extensionManager) {
+async function _load(displaySet, servicesManager: AppTypes.ServicesManager, extensionManager) {
   const { displaySetService, measurementService } = servicesManager.services;
   const dataSources = extensionManager.getDataSources();
   const dataSource = dataSources[0];
-
   const { ContentSequence } = displaySet.instance;
 
-  displaySet.referencedImages = _getReferencedImagesList(ContentSequence);
-  displaySet.measurements = _getMeasurements(ContentSequence);
+  async function retrieveBulkData(obj, parentObj = null, key = null) {
+    for (const prop in obj) {
+      if (typeof obj[prop] === 'object' && obj[prop] !== null) {
+        await retrieveBulkData(obj[prop], obj, prop);
+      } else if (Array.isArray(obj[prop])) {
+        await Promise.all(obj[prop].map(item => retrieveBulkData(item, obj, prop)));
+      } else if (prop === 'BulkDataURI') {
+        const value = await dataSource.retrieve.bulkDataURI({
+          BulkDataURI: obj[prop],
+          StudyInstanceUID: displaySet.instance.StudyInstanceUID,
+          SeriesInstanceUID: displaySet.instance.SeriesInstanceUID,
+          SOPInstanceUID: displaySet.instance.SOPInstanceUID,
+        });
+        if (parentObj && key) {
+          parentObj[key] = new Float32Array(value);
+        }
+      }
+    }
+  }
+
+  if (displaySet.isLoaded !== true) {
+    await retrieveBulkData(ContentSequence);
+  }
+
+  if (displaySet.isImagingMeasurementReport) {
+    displaySet.referencedImages = _getReferencedImagesList(ContentSequence);
+    displaySet.measurements = _getMeasurements(ContentSequence);
+  } else {
+    displaySet.referencedImages = [];
+    displaySet.measurements = [];
+  }
 
   const mappings = measurementService.getSourceMappings(
     CORNERSTONE_3D_TOOLS_SOURCE_NAME,
@@ -199,7 +209,7 @@ function _checkIfCanAddMeasurementsToDisplaySet(
   srDisplaySet,
   newDisplaySet,
   dataSource,
-  servicesManager
+  servicesManager: AppTypes.ServicesManager
 ) {
   const { customizationService } = servicesManager.services;
   let unloadedMeasurements = srDisplaySet.measurements.filter(
@@ -211,7 +221,7 @@ function _checkIfCanAddMeasurementsToDisplaySet(
     return;
   }
 
-  if (!newDisplaySet instanceof ImageSet) {
+  if ((!newDisplaySet) instanceof ImageSet) {
     // This also filters out _this_ displaySet, as it is not an ImageSet.
     return;
   }
@@ -275,7 +285,22 @@ function _checkIfCanAddMeasurementsToDisplaySet(
         }
 
         if (_measurementReferencesSOPInstanceUID(measurement, SOPInstanceUID, frameNumber)) {
-          addMeasurement(measurement, imageId, newDisplaySet.displaySetInstanceUID);
+          const frame =
+            (measurement.coords[0].ReferencedSOPSequence &&
+              measurement.coords[0].ReferencedSOPSequence?.ReferencedFrameNumber) ||
+            1;
+
+          /** Add DICOMSRDisplay annotation for the SR viewport (only) */
+          addDICOMSRDisplayAnnotation(measurement, imageId, frame);
+
+          /** Update measurement properties */
+          measurement.loaded = true;
+          measurement.imageId = imageId;
+          measurement.displaySetInstanceUID = newDisplaySet.displaySetInstanceUID;
+          measurement.ReferencedSOPInstanceUID =
+            measurement.coords[0].ReferencedSOPSequence.ReferencedSOPInstanceUID;
+          measurement.frameNumber = frame;
+          delete measurement.coords;
 
           unloadedMeasurements.splice(j, 1);
         }
@@ -291,7 +316,7 @@ function _measurementReferencesSOPInstanceUID(measurement, SOPInstanceUID, frame
   //  Standard. But for now, we will support only one ReferenceFrameNumber.
   const ReferencedFrameNumber =
     (measurement.coords[0].ReferencedSOPSequence &&
-      measurement.coords[0].ReferencedSOPSequence[0]?.ReferencedFrameNumber) ||
+      measurement.coords[0].ReferencedSOPSequence?.ReferencedFrameNumber) ||
     1;
 
   if (frameNumber && Number(frameNumber) !== Number(ReferencedFrameNumber)) {
@@ -327,6 +352,10 @@ function _getMeasurements(ImagingMeasurementReportContentSequence) {
     item =>
       item.ConceptNameCodeSequence.CodeValue === CodeNameCodeSequenceValues.ImagingMeasurements
   );
+
+  if (!ImagingMeasurements) {
+    return [];
+  }
 
   const MeasurementGroups = _getSequenceAsArray(ImagingMeasurements.ContentSequence).filter(
     item => item.ConceptNameCodeSequence.CodeValue === CodeNameCodeSequenceValues.MeasurementGroup
@@ -581,6 +610,10 @@ function _getReferencedImagesList(ImagingMeasurementReportContentSequence) {
   const ImageLibrary = ImagingMeasurementReportContentSequence.find(
     item => item.ConceptNameCodeSequence.CodeValue === CodeNameCodeSequenceValues.ImageLibrary
   );
+
+  if (!ImageLibrary) {
+    return [];
+  }
 
   const ImageLibraryGroup = _getSequenceAsArray(ImageLibrary.ContentSequence).find(
     item => item.ConceptNameCodeSequence.CodeValue === CodeNameCodeSequenceValues.ImageLibraryGroup

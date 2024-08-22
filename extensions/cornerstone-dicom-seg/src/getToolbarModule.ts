@@ -1,9 +1,9 @@
-export function getToolbarModule({ commandsManager, servicesManager }) {
-  const { segmentationService, toolGroupService } = servicesManager.services;
+export function getToolbarModule({ servicesManager }: withAppTypes) {
+  const { segmentationService, toolbarService, toolGroupService } = servicesManager.services;
   return [
     {
       name: 'evaluate.cornerstone.segmentation',
-      evaluate: ({ viewportId, button, toolNames }) => {
+      evaluate: ({ viewportId, button, toolNames, disabledText }) => {
         // Todo: we need to pass in the button section Id since we are kind of
         // forcing the button to have black background since initially
         // it is designed for the toolbox not the toolbar on top
@@ -13,21 +13,27 @@ export function getToolbarModule({ commandsManager, servicesManager }) {
           return {
             disabled: true,
             className: '!text-common-bright !bg-black opacity-50',
+            disabledText: disabledText ?? 'No segmentations available',
           };
         }
 
         const toolGroup = toolGroupService.getToolGroupForViewport(viewportId);
 
         if (!toolGroup) {
-          return;
-        }
-
-        const toolName = getToolNameForButton(button);
-
-        if (!toolGroup || !toolGroup.hasTool(toolName)) {
           return {
             disabled: true,
             className: '!text-common-bright ohif-disabled',
+            disabledText: disabledText ?? 'Not available on the current viewport',
+          };
+        }
+
+        const toolName = toolbarService.getToolNameForButton(button);
+
+        if (!toolGroup.hasTool(toolName) && !toolNames) {
+          return {
+            disabled: true,
+            className: '!text-common-bright ohif-disabled',
+            disabledText: disabledText ?? 'Not available on the current viewport',
           };
         }
 
@@ -48,18 +54,4 @@ export function getToolbarModule({ commandsManager, servicesManager }) {
       },
     },
   ];
-}
-
-function getToolNameForButton(button) {
-  const { props } = button;
-
-  const commands = props?.commands || button.commands;
-
-  if (commands && commands.length) {
-    const command = commands[0];
-    const { commandOptions } = command;
-    const { toolName } = commandOptions || { toolName: props?.id ?? button.id };
-    return toolName;
-  }
-  return null;
 }

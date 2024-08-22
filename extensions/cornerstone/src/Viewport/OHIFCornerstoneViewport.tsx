@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
-import ReactResizeDetector from 'react-resize-detector';
+import { useResizeDetector } from 'react-resize-detector';
 import PropTypes from 'prop-types';
 import * as cs3DTools from '@cornerstonejs/tools';
 import {
@@ -10,7 +10,7 @@ import {
   utilities as csUtils,
 } from '@cornerstonejs/core';
 import { MeasurementService } from '@ohif/core';
-import { Notification, useViewportDialog } from '@ohif/ui';
+import { Notification, useViewportDialog, AllInOneMenu } from '@ohif/ui';
 import { IStackViewport, IVolumeViewport } from '@cornerstonejs/core/dist/esm/types';
 
 import { setEnabledElement } from '../state';
@@ -18,9 +18,13 @@ import { setEnabledElement } from '../state';
 import './OHIFCornerstoneViewport.css';
 import CornerstoneOverlays from './Overlays/CornerstoneOverlays';
 import getSOPInstanceAttributes from '../utils/measurementServiceMappings/utils/getSOPInstanceAttributes';
-import CornerstoneServices from '../types/CornerstoneServices';
 import CinePlayer from '../components/CinePlayer';
 import { Types } from '@ohif/core';
+
+import OHIFViewportActionCorners from '../components/OHIFViewportActionCorners';
+import { getWindowLevelActionMenu } from '../components/WindowLevelActionMenu/getWindowLevelActionMenu';
+import { useAppConfig } from '@state';
+
 import { LutPresentation, PositionPresentation } from '../types/Presentation';
 
 const STACK = 'stack';
@@ -95,7 +99,7 @@ function areEqual(prevProps, nextProps) {
 
 // Todo: This should be done with expose of internal API similar to react-vtkjs-viewport
 // Then we don't need to worry about the re-renders if the props change.
-const OHIFCornerstoneViewport = React.memo(props => {
+const OHIFCornerstoneViewport = React.memo((props: withAppTypes) => {
   const {
     displaySets,
     dataSource,
@@ -103,19 +107,46 @@ const OHIFCornerstoneViewport = React.memo(props => {
     displaySetOptions,
     servicesManager,
     onElementEnabled,
+    // eslint-disable-next-line react/prop-types
     onElementDisabled,
-    isJumpToMeasurementDisabled,
+    isJumpToMeasurementDisabled = false,
     // Note: you SHOULD NOT use the initialImageIdOrIndex for manipulation
     // of the imageData in the OHIFCornerstoneViewport. This prop is used
     // to set the initial state of the viewport's first image to render
+    // eslint-disable-next-line react/prop-types
     initialImageIndex,
-    onReady,
+    // if the viewport is part of a hanging protocol layout
+    // we should not really rely on the old synchronizers and
+    // you see below we only rehydrate the synchronizers if the viewport
+    // is not part of the hanging protocol layout. HPs should
+    // define their own synchronizers. Since the synchronizers are
+    // viewportId dependent and
+    // eslint-disable-next-line react/prop-types
+    isHangingProtocolLayout,
   } = props;
 
   const viewportId = viewportOptions.viewportId;
+
+  if (!viewportId) {
+    throw new Error('Viewport ID is required');
+  }
+
+  // Make sure displaySetOptions has one object per displaySet
+  while (displaySetOptions.length < displaySets.length) {
+    displaySetOptions.push({});
+  }
+
+  // Since we only have support for dynamic data in volume viewports, we should
+  // handle this case here and set the viewportType to volume if any of the
+  // displaySets are dynamic volumes
+  viewportOptions.viewportType = displaySets.some(ds => ds.isDynamicVolume && ds.isReconstructable)
+    ? 'volume'
+    : viewportOptions.viewportType;
+
   const [scrollbarHeight, setScrollbarHeight] = useState('100px');
   const [enabledVPElement, setEnabledVPElement] = useState(null);
-  const elementRef = useRef();
+  const elementRef = useRef() as React.MutableRefObject<HTMLDivElement>;
+  const [appConfig] = useAppConfig();
 
   const {
     measurementService,
@@ -127,12 +158,13 @@ const OHIFCornerstoneViewport = React.memo(props => {
     cornerstoneCacheService,
     viewportGridService,
     stateSyncService,
-  } = servicesManager.services as CornerstoneServices;
+    viewportActionCornersService,
+  } = servicesManager.services;
 
   const [viewportDialogState] = useViewportDialog();
   // useCallback for scroll bar height calculation
   const setImageScrollBarHeight = useCallback(() => {
-    const scrollbarHeight = `${elementRef.current.clientHeight - 20}px`;
+    const scrollbarHeight = `${elementRef.current.clientHeight - 40}px`;
     setScrollbarHeight(scrollbarHeight);
   }, [elementRef]);
 
@@ -152,6 +184,8 @@ const OHIFCornerstoneViewport = React.memo(props => {
       toolGroupService.removeViewportFromToolGroup(viewportId, renderingEngineId);
 
       syncGroupService.removeViewportFromSyncGroup(viewportId, renderingEngineId, syncGroups);
+
+      viewportActionCornersService.clear(viewportId);
     },
     [viewportId]
   );
@@ -178,14 +212,13 @@ const OHIFCornerstoneViewport = React.memo(props => {
 
       const synchronizersStore = stateSyncService.getState().synchronizersStore;
 
-      if (synchronizersStore?.[viewportId]?.length) {
+      if (synchronizersStore?.[viewportId]?.length && !isHangingProtocolLayout) {
         // If the viewport used to have a synchronizer, re apply it again
         _rehydrateSynchronizers(synchronizersStore, viewportId, syncGroupService);
       }
 
       if (onElementEnabled) {
         onElementEnabled(evt);
-        onReady?.(evt);
       }
     },
     [viewportId, onElementEnabled, toolGroupService]
@@ -361,19 +394,49 @@ const OHIFCornerstoneViewport = React.memo(props => {
     };
   }, [displaySets, elementRef, viewportId]);
 
+  // Set up the window level action menu in the viewport action corners.
+  useEffect(() => {
+    // Doing an === check here because the default config value when not set is true
+    if (appConfig.addWindowLevelActionMenu === false) {
+      return;
+    }
+
+    // TODO: In the future we should consider using the customization service
+    // to determine if and in which corner various action components should go.
+    const wlActionMenu = getWindowLevelActionMenu({
+      viewportId,
+      element: elementRef.current,
+      displaySets,
+      servicesManager,
+      commandsManager,
+      verticalDirection: AllInOneMenu.VerticalDirection.TopToBottom,
+      horizontalDirection: AllInOneMenu.HorizontalDirection.RightToLeft,
+    });
+
+    viewportActionCornersService.setComponent({
+      viewportId,
+      id: 'windowLevelActionMenu',
+      component: wlActionMenu,
+      location: viewportActionCornersService.LOCATIONS.topRight,
+      indexPriority: -100,
+    });
+  }, [displaySets, viewportId, viewportActionCornersService, servicesManager, commandsManager]);
+
+  const { ref: resizeRef } = useResizeDetector({
+    onResize,
+  });
   return (
     <React.Fragment>
       <div className="viewport-wrapper">
-        <ReactResizeDetector
-          onResize={onResize}
-          targetRef={elementRef.current}
-        />
         <div
           className="cornerstone-viewport-element"
           style={{ height: '100%', width: '100%' }}
           onContextMenu={e => e.preventDefault()}
           onMouseDown={e => e.preventDefault()}
-          ref={elementRef}
+          ref={el => {
+            resizeRef.current = el;
+            elementRef.current = el;
+          }}
         ></div>
         <CornerstoneOverlays
           viewportId={viewportId}
@@ -388,7 +451,8 @@ const OHIFCornerstoneViewport = React.memo(props => {
           servicesManager={servicesManager}
         />
       </div>
-      <div className="absolute w-full">
+      {/* top offset of 24px to account for ViewportActionCorners. */}
+      <div className="absolute top-[24px] w-full">
         {viewportDialogState.viewportId === viewportId && (
           <Notification
             id="viewport-notification"
@@ -397,9 +461,12 @@ const OHIFCornerstoneViewport = React.memo(props => {
             actions={viewportDialogState.actions}
             onSubmit={viewportDialogState.onSubmit}
             onOutsideClick={viewportDialogState.onOutsideClick}
+            onKeyPress={viewportDialogState.onKeyPress}
           />
         )}
       </div>
+      {/* The OHIFViewportActionCorners follows the viewport in the DOM so that it is naturally at a higher z-index.*/}
+      <OHIFViewportActionCorners viewportId={viewportId} />
     </React.Fragment>
   );
 }, areEqual);
@@ -427,7 +494,10 @@ function _subscribeToJumpToMeasurementEvents(
           cornerstoneViewportService.getViewportIdToJump(
             jumpId,
             measurement.displaySetInstanceUID,
-            { referencedImageId: measurement.referencedImageId }
+            {
+              referencedImageId:
+                measurement.referencedImageId || measurement.metadata?.referencedImageId,
+            }
           );
       }
       if (cacheJumpToMeasurementEvent.cornerstoneViewport !== viewportId) {
@@ -536,6 +606,9 @@ function _jumpToMeasurement(
         i => i.SOPInstanceUID === SOPInstanceUID
       );
 
+      // the index is reversed in the volume viewport
+      // imageIdIndex = referencedDisplaySet.images.length - 1 - imageIdIndex;
+
       const { viewPlaneNormal: viewportViewPlane } = viewport.getCamera();
 
       // should compare abs for both planes since the direction can be flipped
@@ -616,10 +689,6 @@ function _rehydrateSynchronizers(
 
 // Component displayName
 OHIFCornerstoneViewport.displayName = 'OHIFCornerstoneViewport';
-
-OHIFCornerstoneViewport.defaultProps = {
-  isJumpToMeasurementDisabled: false,
-};
 
 OHIFCornerstoneViewport.propTypes = {
   displaySets: PropTypes.array.isRequired,

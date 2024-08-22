@@ -53,12 +53,14 @@ const MEASUREMENT_SCHEMA_KEYS = [
   'area', // TODO: Add concept names instead (descriptor)
   'mean',
   'stdDev',
+  'perimeter',
   'length',
   'shortestDiameter',
   'longestDiameter',
   'cachedStats',
   'selected',
   'textBox',
+  'referencedImageId',
 ];
 
 const EVENTS = {

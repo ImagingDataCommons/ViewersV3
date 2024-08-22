@@ -1,10 +1,6 @@
-import { addTool, RectangleROIStartEndThresholdTool } from '@cornerstonejs/tools';
-import { utilities } from '@cornerstonejs/core';
+import { addTool, RectangleROIStartEndThresholdTool, CircleROIStartEndThresholdTool } from '@cornerstonejs/tools';
 
 import measurementServiceMappingsFactory from './utils/measurementServiceMappings/measurementServiceMappingsFactory';
-import colormaps from './utils/colormaps';
-
-const { registerColormap } = utilities.colormap;
 
 const CORNERSTONE_3D_TOOLS_SOURCE_NAME = 'Cornerstone3DTools';
 const CORNERSTONE_3D_TOOLS_SOURCE_VERSION = '0.1';
@@ -19,8 +15,9 @@ export default function init({ servicesManager }) {
     servicesManager.services;
 
   addTool(RectangleROIStartEndThresholdTool);
+  addTool(CircleROIStartEndThresholdTool);
 
-  const { RectangleROIStartEndThreshold } = measurementServiceMappingsFactory(
+  const { RectangleROIStartEndThreshold, CircleROIStartEndThreshold } = measurementServiceMappingsFactory(
     measurementService,
     displaySetService,
     cornerstoneViewportService
@@ -38,5 +35,12 @@ export default function init({ servicesManager }) {
     RectangleROIStartEndThreshold.toAnnotation,
     RectangleROIStartEndThreshold.toMeasurement
   );
-  colormaps.forEach(registerColormap);
+
+  measurementService.addMapping(
+    csTools3DVer1MeasurementSource,
+    'CircleROIStartEndThreshold',
+    CircleROIStartEndThreshold.matchingCriteria,
+    CircleROIStartEndThreshold.toAnnotation,
+    CircleROIStartEndThreshold.toMeasurement
+  );
 }

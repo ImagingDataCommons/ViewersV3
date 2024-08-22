@@ -18,56 +18,22 @@ function ThumbnailTracked({
   description,
   seriesNumber,
   numInstances,
+  loadingProgress,
   countIcon,
   messages,
   dragData,
   onClick,
   onDoubleClick,
   onClickUntrack,
-  viewportIdentificator,
   isTracked,
   isActive,
 }) {
   const { t } = useTranslation('ThumbnailTracked');
   const trackedIcon = isTracked ? 'circled-checkmark' : 'dotted-circle';
-  const viewportIdentificatorLabel = viewportIdentificator.join(', ');
-  const renderViewportLabels = () => {
-    const MAX_LABELS_PER_COL = 3;
-    const shouldShowStack = viewportIdentificator.length > MAX_LABELS_PER_COL;
-    if (shouldShowStack) {
-      return (
-        <div>
-          <div>
-            {viewportIdentificator.slice(0, MAX_LABELS_PER_COL).map(label => (
-              <div key={label}>{label}</div>
-            ))}
-          </div>
-          <Tooltip
-            position="right"
-            content={
-              <div className="max-w-40 text-left">
-                {`${t('Viewport')}: ${viewportIdentificatorLabel}`}
-              </div>
-            }
-          >
-            <Icon
-              name="tool-more-menu"
-              className="py-2 text-white"
-            />
-          </Tooltip>
-        </div>
-      );
-    }
-
-    return viewportIdentificator.map(label => <div key={label}>{label}</div>);
-  };
 
   return (
     <div
-      className={classnames(
-        'flex flex-1 cursor-pointer flex-row px-3 py-2 outline-none',
-        className
-      )}
+      className={classnames('flex flex-1 cursor-pointer flex-row px-3 outline-none', className)}
       id={`thumbnail-${displaySetInstanceUID}`}
     >
       <div className="flex-2 flex flex-col items-center">
@@ -93,9 +59,6 @@ function ThumbnailTracked({
                       {isTracked ? t('Series is tracked') : t('Series is untracked')}
                     </span>
                   </span>
-                  {!!viewportIdentificator.length && (
-                    <span>{`${t('Viewport')}: ${viewportIdentificatorLabel}`}</span>
-                  )}
                 </div>
               </div>
             }
@@ -105,13 +68,6 @@ function ThumbnailTracked({
               className="text-primary-light mb-2 w-4"
             />
           </Tooltip>
-
-          <div
-            className="text-center text-xl leading-tight text-white"
-            data-cy={'thumbnail-viewport-labels'}
-          >
-            {renderViewportLabels()}
-          </div>
         </div>
         {isTracked && (
           <div onClick={onClickUntrack}>
@@ -132,6 +88,7 @@ function ThumbnailTracked({
         messages={messages}
         numInstances={numInstances}
         countIcon={countIcon}
+        loadingProgress={loadingProgress}
         isActive={isActive}
         onClick={onClick}
         onDoubleClick={onDoubleClick}
@@ -159,10 +116,10 @@ ThumbnailTracked.propTypes = {
   description: PropTypes.string.isRequired,
   seriesNumber: StringNumber.isRequired,
   numInstances: PropTypes.number.isRequired,
+  loadingProgress: PropTypes.number,
   onClick: PropTypes.func.isRequired,
   onDoubleClick: PropTypes.func.isRequired,
   onClickUntrack: PropTypes.func.isRequired,
-  viewportIdentificator: PropTypes.array,
   isTracked: PropTypes.bool,
   messages: PropTypes.object,
   isActive: PropTypes.bool.isRequired,

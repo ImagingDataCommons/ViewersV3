@@ -28,6 +28,7 @@ interface Layout {
 interface DefaultState {
   activeViewportId: string | null;
   layout: Layout;
+  isHangingProtocolLayout: boolean;
   viewports: Map<string, Viewport>;
 }
 
@@ -38,6 +39,16 @@ const DEFAULT_STATE: DefaultState = {
     numCols: 0,
     layoutType: 'grid',
   },
+  // this flag is used to determine if the hanging protocol layout is active
+  // so that we can inherit the viewport options from the previous state
+  // otherwise we will not allow that. Basically the issue is that we need
+  // to be able to come out of the hanging protocol layout and go back to the
+  // regular layout e.g., if we are in the MPR hanging protocol, and someone use
+  // 1x1 layout by custom layout selector, there is no way to drag and drop
+  // a non-reconstructible series to the viewport since it will always
+  // inherit the hanging protocol layout options (volume viewport),
+  // so we need to be able to switch back to the regular layout.
+  isHangingProtocolLayout: false,
   // Viewports structure has been changed to Map (previously it was
   // tied to the viewportIndex which caused multiple issues. Now we have
   // moved completely to viewportId which is unique for each viewport.
@@ -88,7 +99,11 @@ const determineActiveViewportId = (state: DefaultState, newViewports: Map) => {
   // and find the best match
   const currentOrientation = currentActiveViewport.viewportOptions.orientation;
 
-  const sortedViewports = Array.from(newViewports.values()).sort((a, b) => {
+  const filteredNewViewports = Array.from(newViewports.values()).filter(
+    viewport => viewport.displaySetInstanceUIDs?.length > 0
+  );
+
+  const sortedViewports = Array.from(filteredNewViewports.values()).sort((a, b) => {
     // Compare orientations
     const aOrientationMatch = a.viewportOptions.orientation === currentOrientation;
     const bOrientationMatch = b.viewportOptions.orientation === currentOrientation;
@@ -145,10 +160,18 @@ export function ViewportGridProvider({ children, service }) {
 
           const previousViewport = viewports.get(viewportId);
 
+          // remove options that were meant for one time usage
+          if (previousViewport?.viewportOptions?.initialImageOptions) {
+            const { useOnce } = previousViewport.viewportOptions.initialImageOptions;
+            if (useOnce) {
+              previousViewport.viewportOptions.initialImageOptions = null;
+            }
+          }
+
           // Use the newly provide viewportOptions and display set options
           // when provided, and otherwise fall back to the previous ones.
           // That allows for easy updates of just the display set.
-          const viewportOptions = merge(
+          let viewportOptions = merge(
             {},
             previousViewport?.viewportOptions,
             updatedViewport?.viewportOptions
@@ -157,10 +180,23 @@ export function ViewportGridProvider({ children, service }) {
           const displaySetOptions = updatedViewport.displaySetOptions || [];
           if (!displaySetOptions.length) {
             // Copy all the display set options, assuming a full set of displaySet UID's is provided.
-            displaySetOptions.push(...previousViewport.displaySetOptions);
+            if (state.isHangingProtocolLayout) {
+              displaySetOptions.push(...(previousViewport.displaySetOptions || []));
+            }
             if (!displaySetOptions.length) {
               displaySetOptions.push({});
             }
+          }
+
+          // if it is not part of the hanging protocol layout, we should remove the toolGroupId
+          // and viewportType from the viewportOptions so that it doesn't
+          // inherit the hanging protocol layout options, only when
+          // the viewport options is not provided (e.g., when drag and drop)
+          // otherwise, programmatically set options should be preserved
+          if (!updatedViewport.viewportOptions && !state.isHangingProtocolLayout) {
+            viewportOptions = {
+              viewportId: viewportOptions.viewportId,
+            };
           }
 
           const newViewport = {
@@ -168,7 +204,7 @@ export function ViewportGridProvider({ children, service }) {
             displaySetInstanceUIDs,
             viewportOptions,
             displaySetOptions,
-            viewportLabel: getViewportLabel(viewports, viewportId),
+            // viewportLabel: getViewportLabel(viewports, viewportId),
           };
 
           viewportOptions.presentationIds = ViewportGridService.getPresentationIds(
@@ -192,12 +228,12 @@ export function ViewportGridProvider({ children, service }) {
           layoutType = 'grid',
           activeViewportId,
           findOrCreateViewport,
+          isHangingProtocolLayout,
         } = action.payload;
 
         // If empty viewportOptions, we use numRow and numCols to calculate number of viewports
         const hasOptions = layoutOptions?.length;
         const viewports = new Map<string, Viewport>();
-
         // Options is a temporary state store which can be used by the
         // findOrCreate to store state about already found viewports.  Typically,
         // it will be used to store the display set UID's which are already
@@ -210,7 +246,21 @@ export function ViewportGridProvider({ children, service }) {
           for (let col = 0; col < numCols; col++) {
             const position = col + row * numCols;
             const layoutOption = layoutOptions[position];
-            const positionId = layoutOption?.positionId || `${col}-${row}`;
+
+            let xPos, yPos, w, h;
+            if (layoutOptions && layoutOptions[position]) {
+              ({ x: xPos, y: yPos, width: w, height: h } = layoutOptions[position]);
+            } else {
+              w = 1 / numCols;
+              h = 1 / numRows;
+              xPos = col * w;
+              yPos = row * h;
+            }
+
+            const colIndex = Math.round(xPos * numCols);
+            const rowIndex = Math.round(yPos * numRows);
+
+            const positionId = layoutOption?.positionId || `${colIndex}-${rowIndex}`;
 
             if (hasOptions && position >= layoutOptions.length) {
               continue;
@@ -227,6 +277,7 @@ export function ViewportGridProvider({ children, service }) {
             // If the viewport doesn't have a viewportId, we create one
             if (!viewport.viewportOptions?.viewportId) {
               const randomUID = utils.uuidv4().substring(0, 8);
+              viewport.viewportOptions = viewport.viewportOptions || {};
               viewport.viewportOptions.viewportId = `viewport-${randomUID}`;
             }
 
@@ -235,16 +286,6 @@ export function ViewportGridProvider({ children, service }) {
             // Create a new viewport object as it is getting updated here
             // and it is part of the read only state
             viewports.set(viewport.viewportId, viewport);
-
-            let xPos, yPos, w, h;
-            if (layoutOptions && layoutOptions[position]) {
-              ({ x: xPos, y: yPos, width: w, height: h } = layoutOptions[position]);
-            } else {
-              w = 1 / numCols;
-              h = 1 / numRows;
-              xPos = col * w;
-              yPos = row * h;
-            }
 
             Object.assign(viewport, {
               width: w,
@@ -278,6 +319,7 @@ export function ViewportGridProvider({ children, service }) {
             layoutType,
           },
           viewports,
+          isHangingProtocolLayout,
         };
         return ret;
       }
@@ -368,6 +410,7 @@ export function ViewportGridProvider({ children, service }) {
       layoutOptions = [],
       activeViewportId,
       findOrCreateViewport,
+      isHangingProtocolLayout,
     }) =>
       dispatch({
         type: 'SET_LAYOUT',
@@ -378,6 +421,7 @@ export function ViewportGridProvider({ children, service }) {
           layoutOptions,
           activeViewportId,
           findOrCreateViewport,
+          isHangingProtocolLayout,
         },
       }),
     [dispatch]

@@ -1,4 +1,4 @@
-import { Types as OhifTypes, ServicesManager, PubSubService } from '@ohif/core';
+import { Types as OhifTypes, PubSubService } from '@ohif/core';
 import {
   cache,
   Enums as csEnums,
@@ -7,6 +7,7 @@ import {
   getEnabledElementByIds,
   utilities as csUtils,
   volumeLoader,
+  StackViewport,
 } from '@cornerstonejs/core';
 import {
   Enums as csToolsEnums,
@@ -60,7 +61,7 @@ class SegmentationService extends PubSubService {
   };
 
   segmentations: Record<string, Segmentation>;
-  readonly servicesManager: ServicesManager;
+  readonly servicesManager: AppTypes.ServicesManager;
   highlightIntervalId = null;
   readonly EVENTS = EVENTS;
 
@@ -568,7 +569,7 @@ class SegmentationService extends PubSubService {
         rgba,
       } = segmentInfo;
 
-      const { x, y, z } = segDisplaySet.centroids.get(segmentIndex);
+      const { x, y, z } = segDisplaySet.centroids.get(segmentIndex) || { x: 0, y: 0, z: 0 };
       const centerWorld = derivedVolume.imageData.indexToWorld([x, y, z]);
 
       segmentation.cachedStats = {
@@ -770,8 +771,8 @@ class SegmentationService extends PubSubService {
     const segmentIndices = segmentIndex
       ? [segmentIndex]
       : segmentation.segments
-          .filter(segment => segment?.segmentIndex)
-          .map(segment => segment.segmentIndex);
+        .filter(segment => segment?.segmentIndex)
+        .map(segment => segment.segmentIndex);
 
     const segmentIndicesSet = new Set(segmentIndices);
 
@@ -884,7 +885,13 @@ class SegmentationService extends PubSubService {
       // @ts-ignore
       for (const { viewportId, renderingEngineId } of viewportsInfo) {
         const { viewport } = getEnabledElementByIds(viewportId, renderingEngineId);
-        cstUtils.viewport.jumpToWorld(viewport, world);
+        if (viewport instanceof StackViewport) {
+          const { element } = viewport;
+          const index = csUtils.getClosestStackImageIndexForPoint(world, viewport)
+          cstUtils.viewport.jumpToSlice(element, { imageIndex: index })
+        } else {
+          cstUtils.viewport.jumpToWorld(viewport, world);
+        }
       }
 
       if (highlightSegment) {
@@ -988,6 +995,7 @@ class SegmentationService extends PubSubService {
           referencedVolumeId: volumeId, // Todo: this is so ugly
         },
       },
+      description: `S${displaySet.SeriesNumber}: ${displaySet.SeriesDescription}`,
     };
 
     this.addOrUpdateSegmentation(segmentation);
@@ -1013,6 +1021,8 @@ class SegmentationService extends PubSubService {
     suppressEvents = false
   ): Promise<void> => {
     const segmentation = this.getSegmentation(segmentationId);
+
+    toolGroupId = toolGroupId || this._getApplicableToolGroupId();
 
     if (!segmentation) {
       throw new Error(`Segmentation with segmentationId ${segmentationId} not found.`);
@@ -1146,6 +1156,10 @@ class SegmentationService extends PubSubService {
 
     displaySet.isHydrated = isHydrated;
     displaySetService.setDisplaySetMetadataInvalidated(displaySetUID, false);
+
+    this._broadcastEvent(this.EVENTS.SEGMENTATION_UPDATED, {
+      segmentation: this.getSegmentation(displaySetUID),
+    });
   }
 
   private _highlightLabelmap(
@@ -1243,6 +1257,7 @@ class SegmentationService extends PubSubService {
         {
           [segmentIndex]: {
             CONTOUR: {
+              outlineOpacity: reversedProgress,
               fillAlpha: reversedProgress,
             },
           },
@@ -1288,7 +1303,7 @@ class SegmentationService extends PubSubService {
     }
 
     const { colorLUTIndex } = segmentation;
-    this._removeSegmentationFromCornerstone(segmentationId);
+    const { updatedToolGroupIds } = this._removeSegmentationFromCornerstone(segmentationId);
 
     // Delete associated colormap
     // Todo: bring this back
@@ -1308,7 +1323,9 @@ class SegmentationService extends PubSubService {
       if (remainingHydratedSegmentations.length) {
         const { id } = remainingHydratedSegmentations[0];
 
-        this._setActiveSegmentationForToolGroup(id, this._getApplicableToolGroupId(), false);
+        updatedToolGroupIds.forEach(toolGroupId => {
+          this._setActiveSegmentationForToolGroup(id, toolGroupId, false);
+        });
       }
     }
 
@@ -1965,6 +1982,7 @@ class SegmentationService extends PubSubService {
     const removeFromCache = true;
     const segmentationState = cstSegmentation.state;
     const sourceSegState = segmentationState.getSegmentation(segmentationId);
+    const updatedToolGroupIds: Set<string> = new Set();
 
     if (!sourceSegState) {
       return;
@@ -1980,6 +1998,7 @@ class SegmentationService extends PubSubService {
       segmentationRepresentations.forEach(representation => {
         if (representation.segmentationId === segmentationId) {
           UIDsToRemove.push(representation.segmentationRepresentationUID);
+          updatedToolGroupIds.add(toolGroupId);
         }
       });
 
@@ -1997,6 +2016,8 @@ class SegmentationService extends PubSubService {
     if (removeFromCache && cache.getVolumeLoadObject(segmentationId)) {
       cache.removeVolumeLoadObject(segmentationId);
     }
+
+    return { updatedToolGroupIds: Array.from(updatedToolGroupIds) };
   }
 
   private _updateCornerstoneSegmentations({ segmentationId, notYetUpdatedAtSource }) {

@@ -105,8 +105,8 @@ class ViewportGridService extends PubSubService {
     this.setDisplaySetsForViewports([props]);
   }
 
-  public setDisplaySetsForViewports(props) {
-    this.serviceImplementation._setDisplaySetsForViewports(props);
+  public async setDisplaySetsForViewports(props) {
+    await this.serviceImplementation._setDisplaySetsForViewports(props);
     const state = this.getState();
     const viewports = [];
 
@@ -150,6 +150,7 @@ class ViewportGridService extends PubSubService {
     layoutType = 'grid',
     activeViewportId = undefined,
     findOrCreateViewport = undefined,
+    isHangingProtocolLayout = false,
   }) {
     this.serviceImplementation._setLayout({
       numCols,
@@ -158,6 +159,7 @@ class ViewportGridService extends PubSubService {
       layoutType,
       activeViewportId,
       findOrCreateViewport,
+      isHangingProtocolLayout,
     });
     this._broadcastEvent(this.EVENTS.LAYOUT_CHANGED, {
       numCols,

@@ -1,18 +1,19 @@
 import MODULE_TYPES from './MODULE_TYPES';
 import log from '../log';
-import { AppConfig } from '../types/AppConfig';
-import { PubSubService, ServicesManager } from '../services';
+import { PubSubService, ServiceProvidersManager } from '../services';
 import { HotkeysManager, CommandsManager } from '../classes';
-import { DataSourceDefinition } from '../types';
+import type { DataSourceDefinition } from '../types';
+import type AppTypes from '../types/AppTypes';
 
 /**
  * This is the arguments given to create the extension.
  */
 export interface ExtensionConstructor {
-  servicesManager: ServicesManager;
+  servicesManager: AppTypes.ServicesManager;
+  serviceProvidersManager: ServiceProvidersManager;
   commandsManager: CommandsManager;
   hotkeysManager: HotkeysManager;
-  appConfig: AppConfig;
+  appConfig: AppTypes.Config;
 }
 
 /**
@@ -27,8 +28,10 @@ export type ExtensionConfiguration = Record<string, unknown>;
  */
 export interface ExtensionParams extends ExtensionConstructor {
   extensionManager: ExtensionManager;
-  servicesManager: ServicesManager;
+  servicesManager: AppTypes.ServicesManager;
+  serviceProvidersManager: ServiceProvidersManager;
   configuration?: ExtensionConfiguration;
+  peerImport: (moduleId: string) => Promise<any>;
 }
 
 /**
@@ -46,7 +49,8 @@ export interface Extension {
   getCustomizationModule?: (p: ExtensionParams) => unknown;
   getSopClassHandlerModule?: (p: ExtensionParams) => unknown;
   getToolbarModule?: (p: ExtensionParams) => unknown;
-  onModeEnter?: () => void;
+  getPanelModule?: (p: ExtensionParams) => unknown;
+  onModeEnter?: (p: AppTypes) => void;
   onModeExit?: () => void;
 }
 
@@ -69,8 +73,9 @@ export default class ExtensionManager extends PubSubService {
   public static readonly MODULE_TYPES = MODULE_TYPES;
 
   private _commandsManager: CommandsManager;
-  private _servicesManager: ServicesManager;
+  private _servicesManager: AppTypes.ServicesManager;
   private _hotkeysManager: HotkeysManager;
+  private _serviceProvidersManager: ServiceProvidersManager;
   private modulesMap: Record<string, unknown>;
   private modules: Record<string, any[]>;
   private registeredExtensionIds: string[];
@@ -84,10 +89,12 @@ export default class ExtensionManager extends PubSubService {
   private dataSourceDefs: Record<string, any>;
   private defaultDataSourceName: string;
   private activeDataSource: string;
+  private peerImport: (moduleId) => Promise<any>;
 
   constructor({
     commandsManager,
     servicesManager,
+    serviceProvidersManager,
     hotkeysManager,
     appConfig = {},
   }: ExtensionConstructor) {
@@ -98,6 +105,7 @@ export default class ExtensionManager extends PubSubService {
     //
     this._commandsManager = commandsManager;
     this._servicesManager = servicesManager;
+    this._serviceProvidersManager = serviceProvidersManager;
     this._hotkeysManager = hotkeysManager;
     this._appConfig = appConfig;
 
@@ -110,6 +118,7 @@ export default class ExtensionManager extends PubSubService {
     this.dataSourceDefs = {};
     this.defaultDataSourceName = appConfig.defaultDataSourceName;
     this.activeDataSource = appConfig.defaultDataSourceName;
+    this.peerImport = appConfig.peerImport;
   }
 
   public setActiveDataSource(dataSource: string): void {
@@ -123,6 +132,16 @@ export default class ExtensionManager extends PubSubService {
       ExtensionManager.EVENTS.ACTIVE_DATA_SOURCE_CHANGED,
       this.dataSourceDefs[this.activeDataSource]
     );
+  }
+
+  public getRegisteredExtensionIds() {
+    return [...this.registeredExtensionIds];
+  }
+
+  private getUniqueServicesList(servicesManager: AppTypes.ServicesManager) {
+    // Make sure only one service instance is returned because almost all services are
+    // registered with different keys (eg: StudyPrefetcherService and studyPrefetcherService)
+    return Array.from(new Set(Object.values(servicesManager.services)));
   }
 
   /**
@@ -139,11 +158,12 @@ export default class ExtensionManager extends PubSubService {
       _hotkeysManager,
       _extensionLifeCycleHooks,
     } = this;
+    const services = this.getUniqueServicesList(_servicesManager);
 
     // The onModeEnter of the service must occur BEFORE the extension
     // onModeEnter in order to reset the state to a standard state
     // before the extension restores and cached data.
-    for (const service of Object.values(_servicesManager.services)) {
+    for (const service of services) {
       service?.onModeEnter?.();
     }
 
@@ -163,6 +183,7 @@ export default class ExtensionManager extends PubSubService {
   public onModeExit(): void {
     const { registeredExtensionIds, _servicesManager, _commandsManager, _extensionLifeCycleHooks } =
       this;
+    const services = this.getUniqueServicesList(_servicesManager);
 
     registeredExtensionIds.forEach(extensionId => {
       const onModeExit = _extensionLifeCycleHooks.onModeExit[extensionId];
@@ -177,7 +198,7 @@ export default class ExtensionManager extends PubSubService {
 
     // The service onModeExit calls must occur after the extension ones
     // so that extension ones can store/restore data.
-    for (const service of Object.values(_servicesManager.services)) {
+    for (const service of services) {
       try {
         service?.onModeExit?.();
       } catch (e) {
@@ -256,6 +277,7 @@ export default class ExtensionManager extends PubSubService {
     if (extension.preRegistration) {
       await extension.preRegistration({
         servicesManager: this._servicesManager,
+        serviceProvidersManager: this._serviceProvidersManager,
         commandsManager: this._commandsManager,
         hotkeysManager: this._hotkeysManager,
         extensionManager: this,
@@ -589,6 +611,10 @@ export default class ExtensionManager extends PubSubService {
       );
     });
   };
+
+  public get appConfig() {
+    return this._appConfig;
+  }
 }
 
 /**

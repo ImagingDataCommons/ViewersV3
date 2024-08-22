@@ -1,5 +1,5 @@
 import { ExtensionManager, MODULE_TYPES } from './extensions';
-import { ServicesManager } from './services';
+import { ServiceProvidersManager, ServicesManager } from './services';
 import classes, { CommandsManager, HotkeysManager } from './classes';
 
 import DICOMWeb from './DICOMWeb';
@@ -13,7 +13,6 @@ import defaults from './defaults';
 import * as Types from './types';
 import * as Enums from './enums';
 import { useToolbar } from './hooks/useToolbar';
-
 import {
   CineService,
   UIDialogService,
@@ -33,6 +32,8 @@ import {
   CustomizationService,
   StateSyncService,
   PanelService,
+  WorkflowStepsService,
+  StudyPrefetcherService,
 } from './services';
 
 import { DisplaySetMessage, DisplaySetMessageList } from './services/DisplaySetService';
@@ -51,6 +52,7 @@ const OHIF = {
   ExtensionManager,
   HotkeysManager,
   ServicesManager,
+  ServiceProvidersManager,
   //
   defaults,
   utils,
@@ -83,6 +85,8 @@ const OHIF = {
   PubSubService,
   PanelService,
   useToolbar,
+  WorkflowStepsService,
+  StudyPrefetcherService,
 };
 
 export {
@@ -92,6 +96,7 @@ export {
   ExtensionManager,
   HotkeysManager,
   ServicesManager,
+  ServiceProvidersManager,
   //
   defaults,
   utils,
@@ -126,6 +131,8 @@ export {
   Enums,
   Types,
   PanelService,
+  WorkflowStepsService,
+  StudyPrefetcherService,
   useToolbar,
 };
 

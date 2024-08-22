@@ -13,14 +13,21 @@ import { useToolbox } from '../../contextProviders';
  * role in enhancing the app with a toolbox by providing a way to integrate
  * and display various tools and their corresponding options
  */
-function Toolbox({ servicesManager, buttonSectionId, commandsManager, title, ...props }) {
+function Toolbox({
+  servicesManager,
+  buttonSectionId,
+  commandsManager,
+  title,
+  ...props
+}: withAppTypes) {
   const { state: toolboxState, api } = useToolbox(buttonSectionId);
   const { onInteraction, toolbarButtons } = useToolbar({
     servicesManager,
     buttonSection: buttonSectionId,
   });
 
-  const prevButtonIdsRef = useRef();
+  const prevButtonIdsRef = useRef('');
+  const prevToolboxStateRef = useRef('');
 
   useEffect(() => {
     const currentButtonIdsStr = JSON.stringify(
@@ -33,23 +40,46 @@ function Toolbox({ servicesManager, buttonSectionId, commandsManager, title, ...
       })
     );
 
-    if (prevButtonIdsRef.current === currentButtonIdsStr) {
+    const currentToolBoxStateStr = JSON.stringify(
+      Object.keys(toolboxState.toolOptions).map(tool => {
+        const options = toolboxState.toolOptions[tool];
+        if (Array.isArray(options)) {
+          return options?.map(option => `${option.id}-${option.value}`);
+        }
+      })
+    );
+
+    if (
+      prevButtonIdsRef.current === currentButtonIdsStr &&
+      prevToolboxStateRef.current === currentToolBoxStateStr
+    ) {
       return;
     }
 
     prevButtonIdsRef.current = currentButtonIdsStr;
+    prevToolboxStateRef.current = currentToolBoxStateStr;
 
     const initializeOptionsWithEnhancements = toolbarButtons.reduce(
       (accumulator, toolbarButton) => {
         const { id: buttonId, componentProps } = toolbarButton;
 
-        const createEnhancedOptions = (options, parentId) =>
-          options.map(option => {
+        const createEnhancedOptions = (options, parentId) => {
+          const optionsToUse = Array.isArray(options) ? options : [options];
+
+          return optionsToUse.map(option => {
+            if (typeof option.optionComponent === 'function') {
+              return option;
+            }
+
+            const value =
+              toolboxState.toolOptions?.[parentId]?.find(prop => prop.id === option.id)?.value ??
+              option.value;
+
+            const updatedOptions = toolboxState.toolOptions?.[parentId];
+
             return {
               ...option,
-              value:
-                toolboxState.toolOptions?.[parentId]?.find(prop => prop.id === option.id)?.value ??
-                option.value,
+              value,
               commands: value => {
                 api.handleToolOptionChange(parentId, option.id, value);
 
@@ -59,26 +89,39 @@ function Toolbox({ servicesManager, buttonSectionId, commandsManager, title, ...
                 cmds.forEach(command => {
                   const isString = typeof command === 'string';
                   const isObject = typeof command === 'object';
+                  const isFunction = typeof command === 'function';
 
                   if (isString) {
                     commandsManager.run(command, { value });
                   } else if (isObject) {
                     commandsManager.run({
                       ...command,
-                      commandOptions: { ...command.commandOptions, ...option, value },
+                      commandOptions: {
+                        ...command.commandOptions,
+                        ...option,
+                        value,
+                        options: updatedOptions,
+                      },
                     });
+                  } else if (isFunction) {
+                    command({ value, commandsManager, servicesManager, options: updatedOptions });
                   }
                 });
               },
             };
           });
+        };
 
-        if (componentProps.items?.length) {
-          componentProps.items.forEach(item => {
-            accumulator[item.id] = createEnhancedOptions(item.options, item.id);
+        const { items, options } = componentProps;
+
+        if (items?.length) {
+          items.forEach(({ options, id }) => {
+            accumulator[id] = createEnhancedOptions(options, id);
           });
-        } else if (componentProps.options?.length) {
-          accumulator[buttonId] = createEnhancedOptions(componentProps.options, buttonId);
+        } else if (options?.length) {
+          accumulator[buttonId] = createEnhancedOptions(options, buttonId);
+        } else if (options?.optionComponent) {
+          accumulator[buttonId] = options.optionComponent;
         }
 
         return accumulator;
@@ -87,18 +130,24 @@ function Toolbox({ servicesManager, buttonSectionId, commandsManager, title, ...
     );
 
     api.initializeToolOptions(initializeOptionsWithEnhancements);
-  }, [toolbarButtons, api]);
+  }, [toolbarButtons, api, toolboxState, commandsManager, servicesManager]);
 
   const handleToolOptionChange = (toolName, optionName, newValue) => {
     api.handleToolOptionChange(toolName, optionName, newValue);
   };
+
+  useEffect(() => {
+    return () => {
+      api.handleToolSelect(null);
+    };
+  }, []);
 
   return (
     <ToolboxUI
       {...props}
       title={title}
       toolbarButtons={toolbarButtons}
-      activeToolOptions={toolboxState.toolOptions?.[toolboxState.activeTool]}
+      toolboxState={toolboxState}
       handleToolSelect={id => api.handleToolSelect(id)}
       handleToolOptionChange={handleToolOptionChange}
       onInteraction={onInteraction}

@@ -1,4 +1,4 @@
-import { ServicesManager, utils, Types } from '@ohif/core';
+import { utils, Types } from '@ohif/core';
 
 import { ContextMenuController, defaultContextMenu } from './CustomizableContextMenu';
 import DicomTagBrowser from './DicomTagBrowser/DicomTagBrowser';
@@ -12,7 +12,6 @@ import { NavigateHistory } from './types/commandModuleTypes';
 import { history } from '@ohif/app';
 
 const { subscribeToNextViewportGridChange } = utils;
-
 export type HangingProtocolParams = {
   protocolId?: string;
   stageIndex?: number;
@@ -26,15 +25,6 @@ export type UpdateViewportDisplaySetParams = {
   excludeNonImageModalities?: boolean;
 };
 
-/**
- * Determine if a command is a hanging protocol one.
- * For now, just use the two hanging protocol commands that are in this
- * commands module, but if others get added elsewhere this may need enhancing.
- */
-const isHangingProtocolCommand = command =>
-  command &&
-  (command.commandName === 'setHangingProtocol' || command.commandName === 'toggleHangingProtocol');
-
 const commandsModule = ({
   servicesManager,
   commandsManager,
@@ -47,8 +37,7 @@ const commandsModule = ({
     viewportGridService,
     displaySetService,
     stateSyncService,
-    toolbarService,
-  } = (servicesManager as ServicesManager).services;
+  } = servicesManager.services;
 
   // Define a context menu controller for use with any context menus
   const contextMenuController = new ContextMenuController(servicesManager, commandsManager);
@@ -281,7 +270,7 @@ const commandsModule = ({
     /**
      * Changes the viewport grid layout in terms of the MxN layout.
      */
-    setViewportGridLayout: ({ numRows, numCols }) => {
+    setViewportGridLayout: ({ numRows, numCols, isHangingProtocolLayout = false }) => {
       const { protocol } = hangingProtocolService.getActiveProtocol();
       const onLayoutChange = protocol.callbacks?.onLayoutChange;
       if (commandsManager.run(onLayoutChange, { numRows, numCols }) === false) {
@@ -296,6 +285,7 @@ const commandsModule = ({
         const findOrCreateViewport = layoutFindOrCreate.bind(
           null,
           hangingProtocolService,
+          isHangingProtocolLayout,
           stateReduce.viewportsByPosition
         );
 
@@ -303,6 +293,7 @@ const commandsModule = ({
           numRows,
           numCols,
           findOrCreateViewport,
+          isHangingProtocolLayout,
         });
         stateSyncService.store(stateReduce);
       };
@@ -312,7 +303,7 @@ const commandsModule = ({
 
     toggleOneUp() {
       const viewportGridState = viewportGridService.getState();
-      const { activeViewportId, viewports, layout } = viewportGridState;
+      const { activeViewportId, viewports, layout, isHangingProtocolLayout } = viewportGridState;
       const { displaySetInstanceUIDs, displaySetOptions, viewportOptions } =
         viewports.get(activeViewportId);
 
@@ -339,7 +330,8 @@ const commandsModule = ({
                 .map(displaySetInstanceUID =>
                   hangingProtocolService.getViewportsRequireUpdate(
                     viewportIdToUpdate,
-                    displaySetInstanceUID
+                    displaySetInstanceUID,
+                    isHangingProtocolLayout
                   )
                 )
                 .flat();
@@ -376,6 +368,7 @@ const commandsModule = ({
           activeViewportId: viewportIdToUpdate,
           layoutOptions,
           findOrCreateViewport,
+          isHangingProtocolLayout: true,
         });
       } else {
         // We are not in one-up, so toggle to one up.
@@ -400,6 +393,7 @@ const commandsModule = ({
           numRows: 1,
           numCols: 1,
           findOrCreateViewport,
+          isHangingProtocolLayout: true,
         });
 
         // Subscribe to ANY (i.e. manual and hanging protocol) layout changes so that
@@ -455,6 +449,7 @@ const commandsModule = ({
           displaySetInstanceUID,
           onClose: UIModalService.hide,
         },
+        containerDimensions: 'w-[70%] max-w-[900px]',
         title: 'DICOM Tag Browser',
       });
     },
@@ -510,14 +505,10 @@ const commandsModule = ({
     }: UpdateViewportDisplaySetParams) => {
       const nonImageModalities = ['SR', 'SEG', 'SM', 'RTSTRUCT', 'RTPLAN', 'RTDOSE'];
 
-      // Sort the display sets as per the hanging protocol service viewport/display set scoring system.
-      // The thumbnail list uses the same sorting.
-      const dsSortFn = hangingProtocolService.getDisplaySetSortFunction();
       const currentDisplaySets = [...displaySetService.activeDisplaySets];
 
-      currentDisplaySets.sort(dsSortFn);
-
-      const { activeViewportId, viewports } = viewportGridService.getState();
+      const { activeViewportId, viewports, isHangingProtocolLayout } =
+        viewportGridService.getState();
 
       const { displaySetInstanceUIDs } = viewports.get(activeViewportId);
 
@@ -551,7 +542,8 @@ const commandsModule = ({
       try {
         updatedViewports = hangingProtocolService.getViewportsRequireUpdate(
           activeViewportId,
-          displaySetInstanceUID
+          displaySetInstanceUID,
+          isHangingProtocolLayout
         );
       } catch (error) {
         console.warn(error);

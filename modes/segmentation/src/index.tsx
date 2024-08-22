@@ -4,6 +4,9 @@ import toolbarButtons from './toolbarButtons';
 import segmentationButtons from './segmentationButtons';
 import initToolGroups from './initToolGroups';
 
+const DEFAULT_TOOL_GROUP_ID = 'default';
+const VOLUME3D_TOOL_GROUP_ID = 'volume3d';
+
 const ohif = {
   layout: '@ohif/extension-default.layoutTemplateModule.viewerLayout',
   sopClassHandler: '@ohif/extension-default.sopClassHandlerModule.stack',
@@ -50,7 +53,7 @@ function modeFactory({ modeConfiguration }) {
      * Runs when the Mode Route is mounted to the DOM. Usually used to initialize
      * Services and other resources.
      */
-    onModeEnter: ({ servicesManager, extensionManager, commandsManager }) => {
+    onModeEnter: ({ servicesManager, extensionManager, commandsManager }: withAppTypes) => {
       const { measurementService, toolbarService, toolGroupService } = servicesManager.services;
 
       measurementService.clearMeasurements();
@@ -62,17 +65,18 @@ function modeFactory({ modeConfiguration }) {
       toolbarService.addButtons(segmentationButtons);
 
       toolbarService.createButtonSection('primary', [
+        'WindowLevel',
         'Pan',
+        'Zoom',
+        'TrackballRotate',
         'Capture',
         'Layout',
-        'MPR',
         'Crosshairs',
-        'Zoom',
         'MoreTools',
       ]);
       toolbarService.createButtonSection('segmentationToolbox', ['BrushTools', 'Shapes']);
     },
-    onModeExit: ({ servicesManager }) => {
+    onModeExit: ({ servicesManager }: withAppTypes) => {
       const {
         toolGroupService,
         syncGroupService,
@@ -105,9 +109,13 @@ function modeFactory({ modeConfiguration }) {
       // that is not supported by the mode
       const modalitiesArray = modalities.split('\\');
       return {
-        valid: modalitiesArray.length === 1 ? !['SM', 'US', 'MG', 'OT', 'DOC', 'CR'].includes(modalitiesArray[0]) : true,
-        description: 'The mode does not support studies that ONLY include the following modalities: SM, US, MG, OT, DOC, CR',
-      }
+        valid:
+          modalitiesArray.length === 1
+            ? !['SM', 'US', 'MG', 'OT', 'DOC', 'CR'].includes(modalitiesArray[0])
+            : true,
+        description:
+          'The mode does not support studies that ONLY include the following modalities: SM, US, MG, OT, DOC, CR',
+      };
     },
     /**
      * Mode Routes are used to define the mode's behavior. A list of Mode Route
@@ -148,7 +156,9 @@ function modeFactory({ modeConfiguration }) {
     /** List of extensions that are used by the mode */
     extensions: extensionDependencies,
     /** HangingProtocol used by the mode */
-    // hangingProtocol: [''],
+    // Commented out to just use the most applicable registered hanging protocol
+    // The example is used for a grid layout to specify that as a preferred layout
+    // hangingProtocol: ['@ohif/mnGrid'],
     /** SopClassHandlers used by the mode */
     sopClassHandlers: [ohif.sopClassHandler, segmentation.sopClassHandler],
     /** hotkeys for mode */
