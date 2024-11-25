@@ -90,5 +90,8 @@
   },
   "scripts": {
     "build": "Included as direct dependency"
+  },
+  "resolutions": {
+    "cross-spawn": "6.0.6"
   }
 }
