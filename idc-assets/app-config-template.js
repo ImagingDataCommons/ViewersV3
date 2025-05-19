@@ -1,7 +1,7 @@
 window.config = {
   routerBasename: '/v3',
   whiteLabeling: {
-    createLogoComponentFn: function(React) {
+    createLogoComponentFn: function (React) {
       return React.createElement(
         'a',
         {
@@ -12,7 +12,7 @@ window.config = {
         },
         React.createElement('img', {
           src: '/v3/IDC-Logo-WHITE.svg',
-          className: 'w-14 h-14',
+          className: 'w-15 h-14 p-1',
         })
       );
     },
@@ -20,10 +20,29 @@ window.config = {
   investigationalUseDialog: {
     option: 'never',
   },
+  idcDownloadCommandsDialog: {
+    description: 'Follow the instructions below to download the study or series:',
+    instructions: [
+      {
+        command: 'pip install idc-index --upgrade',
+        label: 'First, install the idc-index python package:',
+      },
+      {
+        command: `idc download {{StudyInstanceUID}}`,
+        label: 'Then, to download the whole study, run:',
+      },
+      {
+        command: `idc download {{SeriesInstanceUID}}`,
+        label: "Or, to download just the active viewport's series, run:",
+      },
+    ],
+  },
   extensions: [],
   modes: [],
   customizationService: {},
   showStudyList: false,
+  disableConfirmationPrompts: true,
+  disableEditing: true,
   // some windows systems have issues with more than 3 web workers
   maxNumberOfWebWorkers: 3,
   // below flag is for performance reasons, but it might not work for all servers
@@ -176,4 +195,3 @@ window.config = {
     },
   ],
 };
-
