@@ -1,52 +1,4 @@
 version: 2.1
-## Force for config
-commands:
-  deployment_setup:
-    steps:
-      - run:
-          name: 'Set the Tier'
-          command: |
-            TIER=DEV
-            if [[ ${CIRCLE_BRANCH} =~ idc-v3-viewer-(prod|test).* ]]; then
-              TIER=$(awk -F- '{print toupper($4)}' \<<< ${CIRCLE_BRANCH})
-            fi
-            echo "export TIER=${TIER}" >> $BASH_ENV
-            echo "Tier was identified as ${TIER} for branch ${CIRCLE_BRANCH}"
-      - run:
-          name: 'Assign Project-level vars'
-          command: |
-            if [ ! -f deployment.key.json ]; then
-              echo "Deployment JSON keyfile not found - loading from CircleCI."
-              KEY=${DEPLOYMENT_KEY_IDC_DEV}
-            else
-              echo "Deployment JSON keyfile found."
-              KEY="NA"
-            fi
-            CLIENT_EMAIL=${DEPLOYMENT_CLIENT_EMAIL_IDC_DEV}
-            PROJECT_ID=${DEPLOYMENT_PROJECT_ID_IDC_DEV}
-            BUCKET=${DEPLOYMENT_BUCKET_IDC_DEV}
-            if [[ ${TIER} == "PROD" ]]; then
-              KEY=${DEPLOYMENT_KEY_IDC_PROD}
-              CLIENT_EMAIL=${DEPLOYMENT_CLIENT_EMAIL_IDC_PROD}
-              PROJECT_ID=${DEPLOYMENT_PROJECT_ID_IDC_PROD}
-              BUCKET=${DEPLOYMENT_BUCKET_IDC_PROD}
-              echo "Using production project and related deployment SA and bucket."
-            elif [[ ${TIER} == "TEST" ]]; then
-              KEY=${DEPLOYMENT_KEY_IDC_TEST}
-              CLIENT_EMAIL=${DEPLOYMENT_CLIENT_EMAIL_IDC_TEST}
-              PROJECT_ID=${DEPLOYMENT_PROJECT_ID_IDC_TEST}
-              BUCKET=${DEPLOYMENT_BUCKET_IDC_TEST}
-              echo "Using test project and related deployment SA and bucket."
-            elif [[ ${TIER} == "DEV" ]]; then
-              echo "Using development/default project and related deployment SA and bucket."
-            else
-              echo "[ERROR] - Unrecognized tier: ${TIER} - exiting."
-              exit 1
-            fi
-            echo "export DEPLOYMENT_KEY=\"${KEY}\"" >> $BASH_ENV
-            echo "export DEPLOYMENT_CLIENT_EMAIL=${CLIENT_EMAIL}" >> $BASH_ENV
-            echo "export DEPLOYMENT_PROJECT_ID=${PROJECT_ID}" >> $BASH_ENV
-            echo "export DEPLOYMENT_BUCKET=${BUCKET}" >> $BASH_ENV
 
 orbs:
   codecov: codecov/codecov@1.0.5
@@ -395,12 +347,11 @@ jobs:
           name: Export Display Variable
           command: export DISPLAY=:99
       - cypress/install:
-          install-command: bun install --no-save
-          package-manager: yarn
+          install-command: yarn install --no-save
       - cypress/run-tests:
           cypress-command: |
             npx wait-on@latest http://localhost:3000 && cd platform/app && npx cypress run --record --parallel
-          start-command: bun run test:data && bun run test:e2e:serve
+          start-command: yarn run test:data && yarn run test:e2e:serve
 
   DOCKER_MULTIARCH_MANIFEST:
     <<: *defaults
@@ -481,10 +432,9 @@ jobs:
             fi
 
 workflows:
-  version: 2
-  build_and_deploy:
+  PR_CHECKS:
     jobs:
-      - build_job:
+      - BUILD_PACKAGES_QUICK:
           filters:
             branches:
               ignore: master
