@@ -11,7 +11,7 @@
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
+# See the License for the specific file governing permissions and
 # limitations under the License.
 #
 
@@ -30,20 +30,19 @@ apt-get install -y make # needed by bun install...
 apt-get install -y g++ # needed by bun install...
 
 #
-# Following instructions at https://bun.sh/docs/installation and
-# https://github.com/nodesource/distributions/blob/master/README.md#deb
+# Following instructions at https://github.com/nodesource/distributions/blob/master/README.md#deb
 #
 
 curl -sL https://deb.nodesource.com/setup_18.x | bash -
 apt-get install -y nodejs
 
-# Install bun using the official installer
-curl -fsSL https://bun.sh/install | bash
-
-# Add bun to PATH for the current session
-export PATH="$HOME/.bun/bin:$PATH"
+# Install bun using npm (more reliable than curl)
+echo "Installing Bun via npm..."
+npm install -g bun
 
 # Verify bun installation
+echo "Bun installation complete!"
+echo "Bun location: $(which bun)"
 bun --version
 
 echo "Libraries Installed"
