@@ -36,13 +36,18 @@ apt-get install -y g++ # needed by bun install...
 curl -sL https://deb.nodesource.com/setup_18.x | bash -
 apt-get install -y nodejs
 
-# Install bun using npm (more reliable than curl)
+# Install yarn and bun using npm (more reliable than curl)
+echo "Installing Yarn via npm..."
+npm install -g yarn
+
 echo "Installing Bun via npm..."
 npm install -g bun
 
-# Verify bun installation
-echo "Bun installation complete!"
+# Verify installations
+echo "Installation complete!"
+echo "Yarn location: $(which yarn)"
+echo "Yarn version: $(yarn --version)"
 echo "Bun location: $(which bun)"
-bun --version
+echo "Bun version: $(bun --version)"
 
 echo "Libraries Installed"
