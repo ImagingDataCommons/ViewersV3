@@ -16,8 +16,15 @@ function transpileJavaScript(mode) {
           // 'dicom-microscopy-viewer',
           // https://github.com/openlayers/openlayers#supported-browsers
           // 'ol', --> Should be fine
+          // Add GCP extensions that need TypeScript transpilation
+          'ohif-gcp-extension',
+          'ohif-gcp-mode',
         ])
-      : excludeNodeModulesExcept([]);
+      : excludeNodeModulesExcept([
+          // Add GCP extensions that need TypeScript transpilation
+          'ohif-gcp-extension',
+          'ohif-gcp-mode',
+        ]);
 
   return {
     // Include mjs, ts, tsx, js, and jsx files.
