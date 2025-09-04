@@ -149,7 +149,7 @@ function commandsModule({
   }
 
   const actions = {
-    loadDerivedDisplaySetsForActiveViewport: () => {
+    loadSegmentationsForActiveViewport: () => {
       const { displaySetService, userAuthenticationService } = servicesManager.services;
 
       const getDerivedSequences = (displaySetUID: string): DisplaySet[] => {
@@ -2253,8 +2253,8 @@ function commandsModule({
   };
 
   const definitions = {
-    loadDerivedDisplaySetsForActiveViewport: {
-      commandFn: actions.loadDerivedDisplaySetsForActiveViewport,
+    loadSegmentationsForActiveViewport: {
+      commandFn: actions.loadSegmentationsForActiveViewport,
     },
     // The command here is to show the viewer context menu, as being the
     // context menu
