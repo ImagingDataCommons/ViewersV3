@@ -11,7 +11,7 @@
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
+# See the License for the specific file governing permissions and
 # limitations under the License.
 #
 
@@ -26,26 +26,28 @@ apt-get update -qq
 apt-get upgrade -y
 
 apt-get install -y	git
-apt-get install -y make # needed by yarn install...
-apt-get install -y g++ # needed by yarn install...
+apt-get install -y make # needed by bun install...
+apt-get install -y g++ # needed by bun install...
 
 #
-# Following instructions at https://classic.yarnpkg.com/ and
-# https://github.com/nodesource/distributions/blob/master/README.md#deb
+# Following instructions at https://github.com/nodesource/distributions/blob/master/README.md#deb
 #
 
 curl -sL https://deb.nodesource.com/setup_18.x | bash -
 apt-get install -y nodejs
 
-curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add -
-echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list
-apt-get install -y yarn
+# Install yarn and bun using npm (more reliable than curl)
+echo "Installing Yarn via npm..."
+npm install -g yarn
 
-# See https://github.com/yarnpkg/yarn/issues/3708:
-apt-get remove cmdinstall
-apt update
-apt-get install -y yarn
+echo "Installing Bun via npm..."
+npm install -g bun
 
-yarn config set workspaces-experimental true
+# Verify installations
+echo "Installation complete!"
+echo "Yarn location: $(which yarn)"
+echo "Yarn version: $(yarn --version)"
+echo "Bun location: $(which bun)"
+echo "Bun version: $(bun --version)"
 
 echo "Libraries Installed"
