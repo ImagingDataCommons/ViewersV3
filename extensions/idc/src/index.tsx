@@ -16,8 +16,8 @@ const extension = {
 
     const moreTools = [
       {
-        id: 'downloadStudySeries',
-        uiType: 'ohif.radioGroup',
+        id: 'DownloadStudySeries',
+        uiType: 'ohif.toolButton',
         props: {
           icon: 'download',
           label: 'Download Study/Series',
@@ -25,17 +25,13 @@ const extension = {
             const { activeViewportId, viewports } = viewportGridService.getState();
             const activeViewportSpecificData = viewports.get(activeViewportId);
             const displaySets = displaySetService.activeDisplaySets;
-
             const activeDisplaySetUID = activeViewportSpecificData.displaySetInstanceUIDs[0];
             const activeDisplaySet = displaySets.find(ds => ds.uid === activeDisplaySetUID);
-
             if (!activeDisplaySet) {
               console.error('No display set found.');
               return;
             }
-
             const { StudyInstanceUID, SeriesInstanceUID } = activeDisplaySet;
-
             UIModalService.show({
               content: DownloadStudySeriesDialog,
               contentProps: {
@@ -50,8 +46,8 @@ const extension = {
       },
     ];
 
-    toolbarService.addButtons([...moreTools]);
-    toolbarService.createButtonSection('primary', ['downloadStudySeries']);
+    toolbarService.register([...moreTools]);
+    toolbarService.updateSection(toolbarService.sections.primary, ['DownloadStudySeries']);
   },
 };
 
