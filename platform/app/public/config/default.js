@@ -60,6 +60,7 @@ window.config = {
     // above, the number of requests can be go a lot higher.
     prefetch: 25,
   },
+  showErrorDetails: 'always', // 'always', 'dev', 'production'
   // filterQueryParam: false,
   // Defines multi-monitor layouts
   multimonitor: [
@@ -173,7 +174,7 @@ window.config = {
         // and in case of relative path, what would it be relative to, options
         // are in the series level or study level (some servers like series some study)
         bulkDataURI: {
-          enabled: true,
+          enabled: false,
           relativeResolution: 'studies',
         },
         omitQuotationForMultipartRequest: true,
