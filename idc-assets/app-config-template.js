@@ -89,6 +89,10 @@ window.config = {
         staticWado: true,
         singlepart: 'bulkdata,video',
         omitQuotationForMultipartRequest: true,
+        /** If true RT does not work */
+        bulkDataURI: {
+          enabled: false,
+        },
       },
     },
   ],
