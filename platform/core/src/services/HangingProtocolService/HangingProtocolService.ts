@@ -430,7 +430,10 @@ export default class HangingProtocolService extends PubSubService {
       this.customAttributeRetrievalCallbacks
     );
 
-    // Resets the full protocol status here.
+    this._commandsManager.run('detachProtocolViewportDataListener');
+    this._commandsManager.run('detachProtocolViewportDataChangedListener');
+
+    // Resets the full protocol status here
     this.protocol = null;
 
     if (protocolId && typeof protocolId === 'string') {
@@ -1032,6 +1035,10 @@ export default class HangingProtocolService extends PubSubService {
 
     try {
       if (!this.protocol || this.protocol.id !== protocol.id) {
+
+        this._commandsManager.run('detachProtocolViewportDataListener');
+        this._commandsManager.run('detachProtocolViewportDataChangedListener');
+
         this.stageIndex = options?.stageIndex || 0;
         //Reset load performed to false to re-fire loading strategy at new study opening
         this.customImageLoadPerformed = false;
@@ -1212,8 +1219,18 @@ export default class HangingProtocolService extends PubSubService {
 
     const { columns: numCols, rows: numRows, layoutOptions = [] } = layoutProps;
 
+    this._commandsManager.run('detachProtocolViewportDataListener');
+    this._commandsManager.run('detachProtocolViewportDataChangedListener');
+
     if (this.protocol?.callbacks?.onViewportDataInitialized) {
-      this._commandsManager.runCommand('attachProtocolViewportDataListener', {
+      this._commandsManager.run('attachProtocolViewportDataListener', {
+        protocol: this.protocol,
+        stageIndex: this.stageIndex,
+      });
+    }
+
+    if (this.protocol?.callbacks?.onViewportDataChanged) {
+      this._commandsManager.run('attachProtocolViewportDataChangedListener', {
         protocol: this.protocol,
         stageIndex: this.stageIndex,
       });

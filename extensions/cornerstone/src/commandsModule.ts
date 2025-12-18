@@ -124,6 +124,9 @@ function commandsModule({
     displaySetService,
   } = servicesManager.services as AppTypes.Services;
 
+  let _protocolViewportDataInitSubscription: { unsubscribe: () => void } | null = null;
+  let _protocolViewportDataChangedSubscription: { unsubscribe: () => void } | null = null;
+
   function _getActiveViewportEnabledElement() {
     return getActiveViewportEnabledElement(viewportGridService);
   }
@@ -1439,16 +1442,62 @@ function commandsModule({
       const command = protocol.callbacks.onViewportDataInitialized;
       const numPanes = protocol.stages?.[stageIndex]?.viewports.length ?? 1;
       let numPanesWithData = 0;
-      const { unsubscribe } = cornerstoneViewportService.subscribe(EVENT, evt => {
+
+      actions.detachProtocolViewportDataListener?.();
+
+      const subscription = cornerstoneViewportService.subscribe(EVENT, () => {
         numPanesWithData++;
 
         if (numPanesWithData === numPanes) {
-          commandsManager.run(...command);
+          commandsManager.run(command);
 
           // Unsubscribe from the event
-          unsubscribe(EVENT);
+          subscription.unsubscribe();
+          _protocolViewportDataInitSubscription = null;
         }
       });
+
+      _protocolViewportDataInitSubscription = subscription;
+    },
+
+    detachProtocolViewportDataListener: () => {
+      if (_protocolViewportDataInitSubscription) {
+        _protocolViewportDataInitSubscription.unsubscribe();
+        _protocolViewportDataInitSubscription = null;
+      }
+    },
+
+    attachProtocolViewportDataChangedListener: ({ protocol, stageIndex }) => {
+      const EVENT = cornerstoneViewportService.EVENTS.VIEWPORT_DATA_CHANGED;
+      const command = protocol.callbacks.onViewportDataChanged;
+
+      actions.detachProtocolViewportDataChangedListener?.();
+
+      const subscription = cornerstoneViewportService.subscribe(
+        EVENT,
+        (evt: { viewportId?: string; viewportData?: unknown }) => {
+          const viewportId = evt?.viewportId;
+          if (!viewportId) {
+            return;
+          }
+
+          commandsManager.run(command, {
+            viewportId,
+            viewportData: evt.viewportData,
+            protocol,
+            stageIndex,
+          });
+        }
+      );
+
+      _protocolViewportDataChangedSubscription = subscription;
+    },
+
+    detachProtocolViewportDataChangedListener: () => {
+      if (_protocolViewportDataChangedSubscription) {
+        _protocolViewportDataChangedSubscription.unsubscribe();
+        _protocolViewportDataChangedSubscription = null;
+      }
     },
 
     setViewportPreset: ({ viewportId, preset }) => {
@@ -2508,6 +2557,15 @@ function commandsModule({
     },
     attachProtocolViewportDataListener: {
       commandFn: actions.attachProtocolViewportDataListener,
+    },
+    detachProtocolViewportDataListener: {
+      commandFn: actions.detachProtocolViewportDataListener,
+    },
+    attachProtocolViewportDataChangedListener: {
+      commandFn: actions.attachProtocolViewportDataChangedListener,
+    },
+    detachProtocolViewportDataChangedListener: {
+      commandFn: actions.detachProtocolViewportDataChangedListener,
     },
     setViewportPreset: {
       commandFn: actions.setViewportPreset,
