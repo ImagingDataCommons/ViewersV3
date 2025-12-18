@@ -223,6 +223,7 @@ function commandsModule({
     const primaryDisplaySetUID = displaySetInstanceUIDs[0];
     const derivedDisplaySets = _getDerivedSegmentations(primaryDisplaySetUID);
     if (!derivedDisplaySets.length) {
+      console.warn('No derived segmentations found for active viewport!');
       return false;
     }
 
