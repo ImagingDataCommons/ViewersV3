@@ -53,11 +53,7 @@
     },
     "addOns/externals/devDependencies": {
       "name": "@externals/devDependencies",
-<<<<<<< HEAD
       "version": "3.11.1",
-=======
-      "version": "3.12.0-beta.22",
->>>>>>> 38a3756b62 (Add command to load derived display sets)
       "dependencies": {
         "@babel/runtime": "7.28.2",
         "@kitware/vtk.js": "32.12.0",
@@ -142,22 +138,14 @@
     },
     "addOns/externals/dicom-microscopy-viewer": {
       "name": "@externals/dicom-microscopy-viewer",
-<<<<<<< HEAD
       "version": "3.11.1",
-=======
-      "version": "3.12.0-beta.22",
->>>>>>> 38a3756b62 (Add command to load derived display sets)
       "dependencies": {
         "dicom-microscopy-viewer": "0.46.1",
       },
     },
     "extensions/cornerstone": {
       "name": "@ohif/extension-cornerstone",
-<<<<<<< HEAD
       "version": "3.11.1",
-=======
-      "version": "3.12.0-beta.22",
->>>>>>> 38a3756b62 (Add command to load derived display sets)
       "dependencies": {
         "@babel/runtime": "7.28.2",
         "@cornerstonejs/adapters": "4.5.13",
@@ -178,7 +166,6 @@
         "worker-loader": "3.0.8",
       },
       "peerDependencies": {
-<<<<<<< HEAD
         "@cornerstonejs/codec-charls": "1.2.3",
         "@cornerstonejs/codec-libjpeg-turbo-8bit": "1.2.2",
         "@cornerstonejs/codec-openjpeg": "1.2.4",
@@ -186,15 +173,6 @@
         "@cornerstonejs/dicom-image-loader": "4.5.13",
         "@ohif/core": "3.11.1",
         "@ohif/ui": "3.11.1",
-=======
-        "@cornerstonejs/codec-charls": "^1.2.3",
-        "@cornerstonejs/codec-libjpeg-turbo-8bit": "^1.2.2",
-        "@cornerstonejs/codec-openjpeg": "^1.2.4",
-        "@cornerstonejs/codec-openjph": "^2.4.5",
-        "@cornerstonejs/dicom-image-loader": "^4.0.0",
-        "@ohif/core": "3.12.0-beta.22",
-        "@ohif/ui": "3.12.0-beta.22",
->>>>>>> 38a3756b62 (Add command to load derived display sets)
         "dcmjs": "0.43.1",
         "dicom-parser": "1.8.21",
         "hammerjs": "2.0.8",
@@ -206,11 +184,7 @@
     },
     "extensions/cornerstone-dicom-pmap": {
       "name": "@ohif/extension-cornerstone-dicom-pmap",
-<<<<<<< HEAD
       "version": "3.11.1",
-=======
-      "version": "3.12.0-beta.22",
->>>>>>> 38a3756b62 (Add command to load derived display sets)
       "dependencies": {
         "@babel/runtime": "7.28.2",
         "@cornerstonejs/adapters": "4.5.13",
@@ -233,11 +207,7 @@
     },
     "extensions/cornerstone-dicom-rt": {
       "name": "@ohif/extension-cornerstone-dicom-rt",
-<<<<<<< HEAD
       "version": "3.11.1",
-=======
-      "version": "3.12.0-beta.22",
->>>>>>> 38a3756b62 (Add command to load derived display sets)
       "dependencies": {
         "@babel/runtime": "7.28.2",
         "react-color": "2.19.3",
@@ -257,11 +227,7 @@
     },
     "extensions/cornerstone-dicom-seg": {
       "name": "@ohif/extension-cornerstone-dicom-seg",
-<<<<<<< HEAD
       "version": "3.11.1",
-=======
-      "version": "3.12.0-beta.22",
->>>>>>> 38a3756b62 (Add command to load derived display sets)
       "dependencies": {
         "@babel/runtime": "7.28.2",
         "@cornerstonejs/adapters": "4.5.13",
@@ -425,79 +391,11 @@
         "react-i18next": "^12.2.2",
         "react-router": "^6.23.1",
         "react-router-dom": "^6.23.1",
-<<<<<<< HEAD
-=======
-      },
-    },
-    "extensions/cornerstone-dicom-sr": {
-      "name": "@ohif/extension-cornerstone-dicom-sr",
-      "version": "3.12.0-beta.22",
-      "dependencies": {
-        "@babel/runtime": "^7.20.13",
-        "@cornerstonejs/adapters": "^4.0.0",
-        "@cornerstonejs/core": "^4.0.0",
-        "@cornerstonejs/tools": "^4.0.0",
-        "classnames": "^2.3.2",
-      },
-      "peerDependencies": {
-        "@ohif/core": "3.12.0-beta.22",
-        "@ohif/extension-cornerstone": "3.12.0-beta.22",
-        "@ohif/extension-measurement-tracking": "3.12.0-beta.22",
-        "@ohif/ui": "3.12.0-beta.22",
-        "dcmjs": "0.43.1",
-        "dicom-parser": "^1.8.9",
-        "hammerjs": "^2.0.8",
-        "prop-types": "^15.6.2",
-        "react": "^18.3.1",
-      },
-    },
-    "extensions/cornerstone-dynamic-volume": {
-      "name": "@ohif/extension-cornerstone-dynamic-volume",
-      "version": "3.12.0-beta.22",
-      "dependencies": {
-        "@babel/runtime": "^7.20.13",
-        "@cornerstonejs/core": "^4.0.0",
-        "@cornerstonejs/tools": "^4.0.0",
-        "classnames": "^2.3.2",
-      },
-      "peerDependencies": {
-        "@ohif/core": "3.12.0-beta.18",
-        "@ohif/extension-cornerstone": "3.12.0-beta.18",
-        "@ohif/extension-default": "3.12.0-beta.18",
-        "@ohif/i18n": "3.12.0-beta.18",
-        "@ohif/ui": "3.12.0-beta.18",
-        "dcmjs": "0.43.1",
-        "dicom-parser": "^1.8.21",
-        "hammerjs": "^2.0.8",
-        "prop-types": "^15.6.2",
-        "react": "^18.3.1",
-      },
-    },
-    "extensions/default": {
-      "name": "@ohif/extension-default",
-      "version": "3.12.0-beta.22",
-      "dependencies": {
-        "@babel/runtime": "^7.20.13",
-        "@cornerstonejs/calculate-suv": "^1.1.0",
-        "lodash.get": "^4.4.2",
-        "lodash.uniqby": "^4.7.0",
-      },
-      "peerDependencies": {
-        "@ohif/core": "3.12.0-beta.22",
-        "@ohif/i18n": "3.12.0-beta.22",
-        "dcmjs": "0.43.1",
-        "dicomweb-client": "^0.10.4",
-        "prop-types": "^15.6.2",
-        "react": "^18.3.1",
-        "react-dom": "^18.3.1",
-        "react-i18next": "^12.2.2",
->>>>>>> 38a3756b62 (Add command to load derived display sets)
         "react-window": "^1.8.9",
         "webpack": "5.89.0",
         "webpack-merge": "^5.7.3",
       },
     },
-<<<<<<< HEAD
     "extensions/measurement-tracking": {
       "name": "@ohif/extension-measurement-tracking",
       "version": "3.11.1",
@@ -515,84 +413,6 @@
         "@ohif/extension-default": "3.11.1",
         "@ohif/ui": "3.11.1",
         "classnames": "2.5.1",
-=======
-    "extensions/dicom-microscopy": {
-      "name": "@ohif/extension-dicom-microscopy",
-      "version": "3.12.0-beta.22",
-      "dependencies": {
-        "@babel/runtime": "^7.20.13",
-        "@cornerstonejs/codec-charls": "^1.2.3",
-        "@cornerstonejs/codec-libjpeg-turbo-8bit": "^1.2.2",
-        "@cornerstonejs/codec-openjpeg": "^1.2.4",
-        "colormap": "^2.3",
-        "lodash.debounce": "^4.0.8",
-        "mathjs": "^12.4.2",
-      },
-      "peerDependencies": {
-        "@ohif/core": "3.12.0-beta.18",
-        "@ohif/extension-default": "3.12.0-beta.18",
-        "@ohif/i18n": "3.12.0-beta.18",
-        "@ohif/ui": "3.12.0-beta.18",
-        "prop-types": "^15.6.2",
-        "react": "^18.3.1",
-        "react-dom": "^18.3.1",
-        "react-i18next": "^10.11.0",
-        "react-router": "^6.23.1",
-        "react-router-dom": "^6.23.1",
-      },
-    },
-    "extensions/dicom-pdf": {
-      "name": "@ohif/extension-dicom-pdf",
-      "version": "3.12.0-beta.22",
-      "dependencies": {
-        "@babel/runtime": "^7.20.13",
-        "classnames": "^2.3.2",
-      },
-      "peerDependencies": {
-        "@ohif/core": "3.12.0-beta.18",
-        "@ohif/ui": "3.12.0-beta.18",
-        "dcmjs": "0.43.1",
-        "dicom-parser": "^1.8.9",
-        "hammerjs": "^2.0.8",
-        "prop-types": "^15.6.2",
-        "react": "^18.3.1",
-      },
-    },
-    "extensions/dicom-video": {
-      "name": "@ohif/extension-dicom-video",
-      "version": "3.12.0-beta.22",
-      "dependencies": {
-        "@babel/runtime": "^7.20.13",
-        "classnames": "^2.3.2",
-      },
-      "peerDependencies": {
-        "@ohif/core": "3.12.0-beta.18",
-        "@ohif/ui": "3.12.0-beta.18",
-        "dcmjs": "0.43.1",
-        "dicom-parser": "^1.8.9",
-        "hammerjs": "^2.0.8",
-        "prop-types": "^15.6.2",
-        "react": "^18.3.1",
-      },
-    },
-    "extensions/measurement-tracking": {
-      "name": "@ohif/extension-measurement-tracking",
-      "version": "3.12.0-beta.22",
-      "dependencies": {
-        "@babel/runtime": "^7.20.13",
-        "@ohif/ui": "3.12.0-beta.22",
-        "@xstate/react": "^3.2.2",
-        "xstate": "^4.10.0",
-      },
-      "peerDependencies": {
-        "@cornerstonejs/core": "^4.0.0",
-        "@cornerstonejs/tools": "^4.0.0",
-        "@ohif/core": "3.12.0-beta.22",
-        "@ohif/extension-cornerstone-dicom-sr": "3.12.0-beta.22",
-        "@ohif/extension-default": "3.12.0-beta.22",
-        "@ohif/ui": "3.12.0-beta.22",
-        "classnames": "^2.3.2",
->>>>>>> 38a3756b62 (Add command to load derived display sets)
         "dcmjs": "0.43.1",
         "lodash.debounce": "4.0.8",
         "prop-types": "15.8.1",
@@ -604,11 +424,7 @@
     },
     "extensions/test-extension": {
       "name": "@ohif/extension-test",
-<<<<<<< HEAD
       "version": "3.11.1",
-=======
-      "version": "3.12.0-beta.22",
->>>>>>> 38a3756b62 (Add command to load derived display sets)
       "dependencies": {
         "@babel/runtime": "7.28.2",
         "classnames": "2.5.1",
@@ -625,11 +441,7 @@
     },
     "extensions/tmtv": {
       "name": "@ohif/extension-tmtv",
-<<<<<<< HEAD
       "version": "3.11.1",
-=======
-      "version": "3.12.0-beta.22",
->>>>>>> 38a3756b62 (Add command to load derived display sets)
       "dependencies": {
         "@babel/runtime": "7.28.2",
         "classnames": "2.5.1",
@@ -646,11 +458,7 @@
     },
     "extensions/usAnnotation": {
       "name": "@ohif/extension-ultrasound-pleura-bline",
-<<<<<<< HEAD
       "version": "3.11.1",
-=======
-      "version": "3.12.0-beta.22",
->>>>>>> 38a3756b62 (Add command to load derived display sets)
       "dependencies": {
         "@babel/runtime": "7.28.2",
         "@cornerstonejs/core": "4.5.13",
@@ -702,11 +510,7 @@
     },
     "modes/basic-dev-mode": {
       "name": "@ohif/mode-basic-dev-mode",
-<<<<<<< HEAD
       "version": "3.11.1",
-=======
-      "version": "3.12.0-beta.22",
->>>>>>> 38a3756b62 (Add command to load derived display sets)
       "dependencies": {
         "@babel/runtime": "7.28.2",
         "i18next": "17.3.1",
@@ -726,11 +530,7 @@
     },
     "modes/basic-test-mode": {
       "name": "@ohif/mode-test",
-<<<<<<< HEAD
       "version": "3.11.1",
-=======
-      "version": "3.12.0-beta.22",
->>>>>>> 38a3756b62 (Add command to load derived display sets)
       "dependencies": {
         "@babel/runtime": "7.28.2",
         "i18next": "17.3.1",
@@ -752,11 +552,7 @@
     },
     "modes/longitudinal": {
       "name": "@ohif/mode-longitudinal",
-<<<<<<< HEAD
       "version": "3.11.1",
-=======
-      "version": "3.12.0-beta.22",
->>>>>>> 38a3756b62 (Add command to load derived display sets)
       "dependencies": {
         "@babel/runtime": "7.28.2",
         "i18next": "17.3.1",
@@ -779,11 +575,7 @@
     },
     "modes/microscopy": {
       "name": "@ohif/mode-microscopy",
-<<<<<<< HEAD
       "version": "3.11.1",
-=======
-      "version": "3.12.0-beta.22",
->>>>>>> 38a3756b62 (Add command to load derived display sets)
       "dependencies": {
         "@babel/runtime": "7.28.2",
         "i18next": "17.3.1",
@@ -795,11 +587,7 @@
     },
     "modes/preclinical-4d": {
       "name": "@ohif/mode-preclinical-4d",
-<<<<<<< HEAD
       "version": "3.11.1",
-=======
-      "version": "3.12.0-beta.22",
->>>>>>> 38a3756b62 (Add command to load derived display sets)
       "dependencies": {
         "@babel/runtime": "7.28.2",
       },
@@ -818,11 +606,7 @@
     },
     "modes/segmentation": {
       "name": "@ohif/mode-segmentation",
-<<<<<<< HEAD
       "version": "3.11.1",
-=======
-      "version": "3.12.0-beta.22",
->>>>>>> 38a3756b62 (Add command to load derived display sets)
       "dependencies": {
         "@babel/runtime": "7.28.2",
         "i18next": "17.3.1",
@@ -866,11 +650,7 @@
     },
     "modes/tmtv": {
       "name": "@ohif/mode-tmtv",
-<<<<<<< HEAD
       "version": "3.11.1",
-=======
-      "version": "3.12.0-beta.22",
->>>>>>> 38a3756b62 (Add command to load derived display sets)
       "dependencies": {
         "@babel/runtime": "7.28.2",
         "i18next": "17.3.1",
@@ -891,11 +671,7 @@
     },
     "modes/usAnnotation": {
       "name": "@ohif/mode-ultrasound-pleura-bline",
-<<<<<<< HEAD
       "version": "3.11.1",
-=======
-      "version": "3.12.0-beta.22",
->>>>>>> 38a3756b62 (Add command to load derived display sets)
       "dependencies": {
         "@babel/runtime": "7.28.2",
         "@cornerstonejs/core": "4.5.13",
@@ -934,11 +710,7 @@
     },
     "platform/app": {
       "name": "@ohif/app",
-<<<<<<< HEAD
       "version": "3.11.1",
-=======
-      "version": "3.12.0-beta.22",
->>>>>>> 38a3756b62 (Add command to load derived display sets)
       "dependencies": {
         "@babel/runtime": "7.28.2",
         "@cornerstonejs/codec-charls": "1.2.3",
@@ -1017,11 +789,7 @@
     },
     "platform/cli": {
       "name": "@ohif/cli",
-<<<<<<< HEAD
       "version": "3.11.1",
-=======
-      "version": "3.12.0-beta.22",
->>>>>>> 38a3756b62 (Add command to load derived display sets)
       "bin": {
         "ohif-cli": "src/index.js",
       },
@@ -1045,11 +813,7 @@
     },
     "platform/core": {
       "name": "@ohif/core",
-<<<<<<< HEAD
       "version": "3.11.1",
-=======
-      "version": "3.12.0-beta.22",
->>>>>>> 38a3756b62 (Add command to load derived display sets)
       "dependencies": {
         "@babel/runtime": "7.28.2",
         "dcmjs": "0.43.1",
@@ -1070,7 +834,6 @@
         "webpack-merge": "5.10.0",
       },
       "peerDependencies": {
-<<<<<<< HEAD
         "@cornerstonejs/codec-charls": "1.2.3",
         "@cornerstonejs/codec-libjpeg-turbo-8bit": "1.2.2",
         "@cornerstonejs/codec-openjpeg": "1.2.4",
@@ -1078,26 +841,13 @@
         "@cornerstonejs/core": "4.5.13",
         "@cornerstonejs/dicom-image-loader": "4.5.13",
         "@ohif/ui": "3.11.1",
-=======
-        "@cornerstonejs/codec-charls": "^1.2.3",
-        "@cornerstonejs/codec-libjpeg-turbo-8bit": "^1.2.2",
-        "@cornerstonejs/codec-openjpeg": "^1.2.4",
-        "@cornerstonejs/codec-openjph": "^2.4.5",
-        "@cornerstonejs/core": "^4.0.0",
-        "@cornerstonejs/dicom-image-loader": "^4.0.0",
-        "@ohif/ui": "3.12.0-beta.22",
->>>>>>> 38a3756b62 (Add command to load derived display sets)
         "cornerstone-math": "0.1.9",
         "dicom-parser": "1.8.21",
       },
     },
     "platform/i18n": {
       "name": "@ohif/i18n",
-<<<<<<< HEAD
       "version": "3.11.1",
-=======
-      "version": "3.12.0-beta.22",
->>>>>>> 38a3756b62 (Add command to load derived display sets)
       "dependencies": {
         "@babel/runtime": "7.28.2",
         "i18next-locize-backend": "2.2.2",
@@ -1122,11 +872,7 @@
     },
     "platform/ui": {
       "name": "@ohif/ui",
-<<<<<<< HEAD
       "version": "3.11.1",
-=======
-      "version": "3.12.0-beta.22",
->>>>>>> 38a3756b62 (Add command to load derived display sets)
       "dependencies": {
         "@testing-library/react": "13.4.0",
         "browser-detect": "0.2.28",
@@ -1177,11 +923,7 @@
     },
     "platform/ui-next": {
       "name": "@ohif/ui-next",
-<<<<<<< HEAD
       "version": "3.11.1",
-=======
-      "version": "3.12.0-beta.22",
->>>>>>> 38a3756b62 (Add command to load derived display sets)
       "dependencies": {
         "@radix-ui/react-accordion": "1.2.11",
         "@radix-ui/react-checkbox": "1.3.2",
