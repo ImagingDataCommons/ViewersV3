@@ -154,7 +154,7 @@ function commandsModule({
    * Retrieves derived segmentations (SEG/RTSTRUCT) that are not yet hydrated
    * for the given display set UID.
    */
-  function _getDerivedSegmentations(displaySetUID: string): DisplaySet[] {
+  function getDerivedData(modalities: string[], displaySetUID: string): DisplaySet[] {
     const currentDisplaySet = displaySetService.getDisplaySetByUID(displaySetUID);
     if (!currentDisplaySet) {
       return [];
@@ -164,13 +164,8 @@ function commandsModule({
     const allDisplaySets = Array.from(displaySetCache.values());
 
     return allDisplaySets.filter((ds): ds is DisplaySet => {
-      if (!ds?.isOverlayDisplaySet || ds?.isHydrated) {
-        return false;
-      }
-
-      /** Check if this is a SEG or RTSTRUCT modality */
-      const isSegmentationModality = ds.Modality === 'SEG' || ds.Modality === 'RTSTRUCT';
-      if (!isSegmentationModality) {
+      const isValidModality = modalities.includes(ds.Modality);
+      if (!isValidModality) {
         return false;
       }
 
@@ -183,26 +178,8 @@ function commandsModule({
     });
   }
 
-  function _handleBrushSizeAction(action: 'increase' | 'decrease') {
-    const toolGroupIds = toolGroupService.getToolGroupIds();
-    if (!toolGroupIds?.length) {
-      return;
-    }
-
-    for (const toolGroupId of toolGroupIds) {
-      const brushSize = segmentationUtils.getBrushSizeForToolGroup(toolGroupId);
-
-      const newBrushSize = action === 'increase' ? brushSize + 3 : brushSize - 3;
-
-      if (brushSize) {
-        segmentationUtils.setBrushSizeForToolGroup(toolGroupId, newBrushSize);
-
-        toolbarService.refreshToolbarState({ toolGroupId });
-      }
-    }
-  }
-
   const loadDerivedDisplaySetsForActiveViewport = async (
+    modalities: string[],
     onLoadComplete: (displaySet: any, activeViewportId: string) => Promise<void> | void
   ): Promise<boolean> => {
     const activeViewportId = viewportGridService.getActiveViewportId();
@@ -219,9 +196,9 @@ function commandsModule({
     }
 
     const primaryDisplaySetUID = displaySetInstanceUIDs[0];
-    const derivedDisplaySets = _getDerivedSegmentations(primaryDisplaySetUID);
+    const derivedDisplaySets = getDerivedData(modalities, primaryDisplaySetUID);
     if (!derivedDisplaySets.length) {
-      console.warn('No derived segmentations found for active viewport!');
+      console.warn('No derived data found for active viewport!');
       return false;
     }
 
@@ -241,26 +218,11 @@ function commandsModule({
   };
 
   const actions = {
-    loadSRsForActiveViewport: async () => {
-      console.info('Loading SRs for active viewport...');
-
-      const loaded = await loadDerivedDisplaySetsForActiveViewport(async displaySet => {
-        commandsManager.run('hydrateStructuredReport', {
-          displaySetInstanceUID: displaySet.displaySetInstanceUID,
-        });
-      });
-
-      if (!loaded) {
-        console.warn('No derived SRs found for active viewport');
-        return;
-      }
-
-      console.info('SRs loaded for active viewport.');
-    },
     loadSegmentationsForActiveViewport: async () => {
       console.info('Loading segmentations for active viewport...');
 
       const loaded = await loadDerivedDisplaySetsForActiveViewport(
+        ['SEG', 'RTSTRUCT'],
         async (displaySet, activeViewportId) => {
           const representationType =
             displaySet.Modality === 'SEG'
@@ -2392,9 +2354,6 @@ function commandsModule({
   };
 
   const definitions = {
-    loadSRsForActiveViewport: {
-      commandFn: actions.loadSRsForActiveViewport,
-    },
     loadSegmentationsForActiveViewport: {
       commandFn: actions.loadSegmentationsForActiveViewport,
     },
