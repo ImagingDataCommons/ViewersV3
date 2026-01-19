@@ -40,8 +40,6 @@ import { updateSegmentBidirectionalStats } from './utils/updateSegmentationStats
 import { generateSegmentationCSVReport } from './utils/generateSegmentationCSVReport';
 import { getUpdatedViewportsForSegmentation } from './utils/hydrationUtils';
 import { SegmentationRepresentations } from '@cornerstonejs/tools/enums';
-import { isMeasurementWithinViewport } from './utils/isMeasurementWithinViewport';
-import { getCenterExtent } from './utils/getCenterExtent';
 import { DisplaySet } from 'platform/core/src/types';
 
 const { DefaultHistoryMemo } = csUtils.HistoryMemo;
