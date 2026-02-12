@@ -40,6 +40,7 @@ import { updateSegmentBidirectionalStats } from './utils/updateSegmentationStats
 import { generateSegmentationCSVReport } from './utils/generateSegmentationCSVReport';
 import { getUpdatedViewportsForSegmentation } from './utils/hydrationUtils';
 import { SegmentationRepresentations } from '@cornerstonejs/tools/enums';
+import { DisplaySet } from 'platform/core/src/types';
 
 const { DefaultHistoryMemo } = csUtils.HistoryMemo;
 const toggleSyncFunctions = {
@@ -117,8 +118,12 @@ function commandsModule({
     hangingProtocolService,
     syncGroupService,
     segmentationService,
+    userAuthenticationService,
     displaySetService,
   } = servicesManager.services as AppTypes.Services;
+
+  let _protocolViewportDataInitSubscription: { unsubscribe: () => void } | null = null;
+  let _protocolViewportDataChangedSubscription: { unsubscribe: () => void } | null = null;
 
   function _getActiveViewportEnabledElement() {
     return getActiveViewportEnabledElement(viewportGridService);
@@ -145,7 +150,99 @@ function commandsModule({
     };
   }
 
+  /**
+   * Retrieves derived segmentations (SEG/RTSTRUCT) that are not yet hydrated
+   * for the given display set UID.
+   */
+  function getDerivedData(modalities: string[], displaySetUID: string): DisplaySet[] {
+    const currentDisplaySet = displaySetService.getDisplaySetByUID(displaySetUID);
+    if (!currentDisplaySet) {
+      return [];
+    }
+
+    const displaySetCache = displaySetService.getDisplaySetCache();
+    const allDisplaySets = Array.from(displaySetCache.values());
+
+    return allDisplaySets.filter((ds): ds is DisplaySet => {
+      const isValidModality = modalities.includes(ds.Modality);
+      if (!isValidModality) {
+        return false;
+      }
+
+      /** Check if this derived display set references the current display set */
+      const referencesDisplaySet =
+        ds.referencedDisplaySetInstanceUID === displaySetUID ||
+        ds.SeriesInstanceUID === currentDisplaySet.SeriesInstanceUID;
+
+      return referencesDisplaySet;
+    });
+  }
+
+  const loadDerivedDisplaySetsForActiveViewport = async (
+    modalities: string[],
+    onLoadComplete: (displaySet: any, activeViewportId: string) => Promise<void> | void
+  ): Promise<boolean> => {
+    const activeViewportId = viewportGridService.getActiveViewportId();
+    if (!activeViewportId) {
+      console.warn('No active viewport found');
+      return false;
+    }
+
+    const displaySetInstanceUIDs =
+      viewportGridService.getDisplaySetsUIDsForViewport(activeViewportId);
+    if (!displaySetInstanceUIDs?.length) {
+      console.warn('No display sets found for active viewport');
+      return false;
+    }
+
+    const primaryDisplaySetUID = displaySetInstanceUIDs[0];
+    const derivedDisplaySets = getDerivedData(modalities, primaryDisplaySetUID);
+    if (!derivedDisplaySets.length) {
+      console.warn('No derived data found for active viewport!');
+      return false;
+    }
+
+    const headers = userAuthenticationService.getAuthorizationHeader();
+
+    const loadPromises = derivedDisplaySets.map(async displaySet => {
+      try {
+        await displaySet.load({ headers });
+        await onLoadComplete(displaySet, activeViewportId);
+      } catch (error) {
+        console.error(`Failed to load segmentation ${displaySet.displaySetInstanceUID}:`, error);
+      }
+    });
+
+    await Promise.all(loadPromises);
+    return true;
+  };
+
   const actions = {
+    loadSegmentationsForActiveViewport: async () => {
+      console.info('Loading segmentations for active viewport...');
+
+      const loaded = await loadDerivedDisplaySetsForActiveViewport(
+        ['SEG', 'RTSTRUCT'],
+        async (displaySet, activeViewportId) => {
+          const representationType =
+            displaySet.Modality === 'SEG'
+              ? Enums.SegmentationRepresentations.Labelmap
+              : Enums.SegmentationRepresentations.Contour;
+
+          segmentationService.addSegmentationRepresentation(activeViewportId, {
+            segmentationId: displaySet.displaySetInstanceUID,
+            type: representationType,
+          });
+        }
+      );
+
+      if (!loaded) {
+        console.warn('No derived segmentations found for active viewport');
+        return;
+      }
+
+      console.info('Segmentations loaded for active viewport.');
+    },
     jumpToMeasurementViewport: ({ annotationUID, measurement }) => {
       cornerstoneTools.annotation.selection.setAnnotationSelected(annotationUID, true);
       const { metadata } = measurement;
@@ -1306,16 +1403,62 @@ function commandsModule({
       const command = protocol.callbacks.onViewportDataInitialized;
       const numPanes = protocol.stages?.[stageIndex]?.viewports.length ?? 1;
       let numPanesWithData = 0;
-      const { unsubscribe } = cornerstoneViewportService.subscribe(EVENT, evt => {
+
+      actions.detachProtocolViewportDataListener?.();
+
+      const subscription = cornerstoneViewportService.subscribe(EVENT, () => {
         numPanesWithData++;
 
         if (numPanesWithData === numPanes) {
-          commandsManager.run(...command);
+          commandsManager.run(command);
 
           // Unsubscribe from the event
-          unsubscribe(EVENT);
+          subscription.unsubscribe();
+          _protocolViewportDataInitSubscription = null;
         }
       });
+
+      _protocolViewportDataInitSubscription = subscription;
+    },
+
+    detachProtocolViewportDataListener: () => {
+      if (_protocolViewportDataInitSubscription) {
+        _protocolViewportDataInitSubscription.unsubscribe();
+        _protocolViewportDataInitSubscription = null;
+      }
+    },
+
+    attachProtocolViewportDataChangedListener: ({ protocol, stageIndex }) => {
+      const EVENT = cornerstoneViewportService.EVENTS.VIEWPORT_DATA_CHANGED;
+      const command = protocol.callbacks.onViewportDataChanged;
+
+      actions.detachProtocolViewportDataChangedListener?.();
+
+      const subscription = cornerstoneViewportService.subscribe(
+        EVENT,
+        (evt: { viewportId?: string; viewportData?: unknown }) => {
+          const viewportId = evt?.viewportId;
+          if (!viewportId) {
+            return;
+          }
+
+          commandsManager.run(command, {
+            viewportId,
+            viewportData: evt.viewportData,
+            protocol,
+            stageIndex,
+          });
+        }
+      );
+
+      _protocolViewportDataChangedSubscription = subscription;
+    },
+
+    detachProtocolViewportDataChangedListener: () => {
+      if (_protocolViewportDataChangedSubscription) {
+        _protocolViewportDataChangedSubscription.unsubscribe();
+        _protocolViewportDataChangedSubscription = null;
+      }
     },
 
     setViewportPreset: ({ viewportId, preset }) => {
@@ -2211,6 +2354,9 @@ function commandsModule({
   };
 
   const definitions = {
+    loadSegmentationsForActiveViewport: {
+      commandFn: actions.loadSegmentationsForActiveViewport,
+    },
     // The command here is to show the viewer context menu, as being the
     // context menu
     showCornerstoneContextMenu: {
@@ -2369,6 +2515,15 @@ function commandsModule({
     },
     attachProtocolViewportDataListener: {
       commandFn: actions.attachProtocolViewportDataListener,
+    },
+    detachProtocolViewportDataListener: {
+      commandFn: actions.detachProtocolViewportDataListener,
+    },
+    attachProtocolViewportDataChangedListener: {
+      commandFn: actions.attachProtocolViewportDataChangedListener,
+    },
+    detachProtocolViewportDataChangedListener: {
+      commandFn: actions.detachProtocolViewportDataChangedListener,
     },
     setViewportPreset: {
       commandFn: actions.setViewportPreset,
