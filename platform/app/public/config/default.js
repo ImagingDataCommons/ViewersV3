@@ -3,46 +3,11 @@
 window.config = {
   name: 'config/default.js',
   routerBasename: null,
-  whiteLabeling: {
-    createLogoComponentFn: function (React) {
-      return React.createElement(
-        'a',
-        {
-          target: '_self',
-          rel: 'noopener noreferrer',
-          className: 'text-purple-600 line-through',
-          href: '/',
-        },
-        React.createElement('img', {
-          src: '/assets/idc.svg',
-          className: 'w-15 h-14 p-1',
-        })
-      );
-    },
-  },
-  idcDownloadCommandsDialog: {
-    description: 'Follow the instructions below to download the study or series:',
-    instructions: [
-      {
-        command: 'pip install idc-index --upgrade',
-        label: 'First, install the idc-index python package:',
-      },
-      {
-        command: `idc download {{StudyInstanceUID}}`,
-        label: 'Then, to download the whole study, run:',
-      },
-      {
-        command: `idc download {{SeriesInstanceUID}}`,
-        label: "Or, to download just the active viewport's series, run:",
-      },
-    ],
-  },
+  // whiteLabeling: {},
   extensions: [],
   modes: [],
   customizationService: {},
   showStudyList: true,
-  disableConfirmationPrompts: true,
-  disableEditing: true,
   // some windows systems have issues with more than 3 web workers
   maxNumberOfWebWorkers: 3,
   // below flag is for performance reasons, but it might not work for all servers
@@ -123,7 +88,7 @@ window.config = {
       ],
     },
   ],
-  defaultDataSourceName: 'idc-dicomweb',
+  defaultDataSourceName: 'ohif',
   /* Dynamic config allows user to pass "configUrl" query string this allows to load config without recompiling application. The regex will ensure valid configuration source */
   // dangerouslyUseDynamicConfig: {
   //   enabled: true,
@@ -134,54 +99,8 @@ window.config = {
   //   // regex: /(https:\/\/hospital.com(\/[0-9A-Za-z.]+)*)|(https:\/\/othersite.com(\/[0-9A-Za-z.]+)*)/
   //   regex: /.*/,
   // },
-  oidc: [
-    {
-      authority: 'https://accounts.google.com',
-      client_id: '370953977065-o32uf5cn5f4bovtogdu862mlnhbcv9hk.apps.googleusercontent.com',
-      redirect_uri: '/callback',
-      response_type: 'id_token token',
-      scope:
-        'email profile openid https://www.googleapis.com/auth/cloudplatformprojects.readonly https://www.googleapis.com/auth/cloud-healthcare',
-      post_logout_redirect_uri: '/logout-redirect.html',
-      revoke_uri: 'https://accounts.google.com/o/oauth2/revoke?token=',
-      automaticSilentRenew: true,
-      revokeAccessTokenOnSignout: true,
-    },
-  ],
   dataSources: [
     {
-      friendlyName: 'dcmjs DICOMWeb Server',
-      namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
-      sourceName: 'idc-dicomweb',
-      configuration: {
-        name: 'idc-dicomweb',
-        wadoUriRoot:
-          'https://testing-proxy.canceridc.dev/current/viewer-only-no-downloads-see-tinyurl-dot-com-slash-3j3d9jyp/dicomWeb',
-        qidoRoot:
-          'https://testing-proxy.canceridc.dev/current/viewer-only-no-downloads-see-tinyurl-dot-com-slash-3j3d9jyp/dicomWeb',
-        wadoRoot:
-          'https://testing-proxy.canceridc.dev/current/viewer-only-no-downloads-see-tinyurl-dot-com-slash-3j3d9jyp/dicomWeb',
-        qidoSupportsIncludeField: false,
-        supportsReject: false,
-        imageRendering: 'wadors',
-        thumbnailRendering: 'wadors',
-        enableStudyLazyLoad: true,
-        supportsFuzzyMatching: false,
-        supportsWildcard: false,
-        staticWado: true,
-        singlepart: 'bulkdata,video',
-        // whether the data source should use retrieveBulkData to grab metadata,
-        // and in case of relative path, what would it be relative to, options
-        // are in the series level or study level (some servers like series some study)
-        bulkDataURI: {
-          enabled: false,
-          relativeResolution: 'studies',
-        },
-        omitQuotationForMultipartRequest: true,
-      },
-    },
-    {
-      friendlyName: 'dcmjs DICOMWeb Server',
       namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
       sourceName: 'ohif',
       configuration: {
@@ -225,7 +144,7 @@ window.config = {
         thumbnailRendering: 'wadors',
         enableStudyLazyLoad: true,
         supportsFuzzyMatching: false,
-        supportsWildcard: false,
+        supportsWildcard: true,
         staticWado: true,
         singlepart: 'bulkdata,video',
         // whether the data source should use retrieveBulkData to grab metadata,
@@ -240,13 +159,13 @@ window.config = {
     },
     {
       namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
-      sourceName: 'ohif',
+      sourceName: 'ohif3',
       configuration: {
         friendlyName: 'AWS S3 Static wado secondary server',
         name: 'aws',
-        wadoUriRoot: 'https://d14fa38qiwhyfd.cloudfront.net/dicomweb',
-        qidoRoot: 'https://d14fa38qiwhyfd.cloudfront.net/dicomweb',
-        wadoRoot: 'https://d14fa38qiwhyfd.cloudfront.net/dicomweb',
+        wadoUriRoot: 'https://d3t6nz73ql33tx.cloudfront.net/dicomweb',
+        qidoRoot: 'https://d3t6nz73ql33tx.cloudfront.net/dicomweb',
+        wadoRoot: 'https://d3t6nz73ql33tx.cloudfront.net/dicomweb',
         qidoSupportsIncludeField: false,
         supportsReject: false,
         imageRendering: 'wadors',
@@ -334,6 +253,21 @@ window.config = {
         name: 'dicomwebproxy',
       },
     },
+    {
+      namespace: '@ohif/extension-default.dataSourcesModule.dicomjson',
+      sourceName: 'dicomjson',
+      configuration: {
+        friendlyName: 'dicom json',
+        name: 'json',
+      },
+    },
+    {
+      namespace: '@ohif/extension-default.dataSourcesModule.dicomlocal',
+      sourceName: 'dicomlocal',
+      configuration: {
+        friendlyName: 'dicom local',
+      },
+    },
   ],
   httpErrorHandler: error => {
     // This is 429 when rejected from the public idc sandbox too often.
@@ -350,21 +284,115 @@ window.config = {
   //     background: 'rgba(100, 100, 100, 0.5)', // can be any valid css color
   //   },
   // },
-  // whiteLabeling: {
-  //   createLogoComponentFn: function (React) {
-  //     return React.createElement(
-  //       'a',
-  //       {
-  //         target: '_self',
-  //         rel: 'noopener noreferrer',
-  //         className: 'text-purple-600 line-through',
-  //         href: '_X___IDC__LOGO__LINK___Y_',
-  //       },
-  //       React.createElement('img', {
-  //         src: './Logo.svg',
-  //         className: 'w-14 h-14',
-  //       })
-  //     );
+};
+
+/** IDC Specific */
+window.config = {
+  ...window.config,
+  whiteLabeling: {
+    createLogoComponentFn: function (React) {
+      return React.createElement(
+        'a',
+        {
+          target: '_self',
+          rel: 'noopener noreferrer',
+          className: 'text-purple-600 line-through',
+          href: '/',
+        },
+        React.createElement('img', {
+          src: '/assets/idc.svg',
+          className: 'w-15 h-14 p-1',
+        })
+      );
+    },
+  },
+  idcDownloadCommandsDialog: {
+    description: 'Follow the instructions below to download the study or series:',
+    instructions: [
+      {
+        command: 'pip install idc-index --upgrade',
+        label: 'First, install the idc-index python package:',
+      },
+      {
+        command: `idc download {{StudyInstanceUID}}`,
+        label: 'Then, to download the whole study, run:',
+      },
+      {
+        command: `idc download {{SeriesInstanceUID}}`,
+        label: "Or, to download just the active viewport's series, run:",
+      },
+    ],
+  },
+  disableConfirmationPrompts: true,
+  disableEditing: true,
+  defaultDataSourceName: 'ohif',
+  dataSources: [
+    {
+      friendlyName: 'dcmjs DICOMWeb Server',
+      namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
+      sourceName: 'idc-dicomweb',
+      configuration: {
+        name: 'idc-dicomweb',
+        wadoUriRoot:
+          'https://testing-proxy.canceridc.dev/current/viewer-only-no-downloads-see-tinyurl-dot-com-slash-3j3d9jyp/dicomWeb',
+        qidoRoot:
+          'https://testing-proxy.canceridc.dev/current/viewer-only-no-downloads-see-tinyurl-dot-com-slash-3j3d9jyp/dicomWeb',
+        wadoRoot:
+          'https://testing-proxy.canceridc.dev/current/viewer-only-no-downloads-see-tinyurl-dot-com-slash-3j3d9jyp/dicomWeb',
+        qidoSupportsIncludeField: false,
+        supportsReject: false,
+        imageRendering: 'wadors',
+        thumbnailRendering: 'wadors',
+        enableStudyLazyLoad: true,
+        supportsFuzzyMatching: false,
+        supportsWildcard: false,
+        staticWado: true,
+        singlepart: 'bulkdata,video',
+        bulkDataURI: {
+          enabled: false,
+          relativeResolution: 'studies',
+        },
+        omitQuotationForMultipartRequest: true,
+      },
+    },
+    {
+      namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
+      sourceName: 'ohif',
+      configuration: {
+        friendlyName: 'AWS S3 Static wado secondary server',
+        name: 'aws',
+        wadoUriRoot: 'https://d14fa38qiwhyfd.cloudfront.net/dicomweb',
+        qidoRoot: 'https://d14fa38qiwhyfd.cloudfront.net/dicomweb',
+        wadoRoot: 'https://d14fa38qiwhyfd.cloudfront.net/dicomweb',
+        qidoSupportsIncludeField: false,
+        supportsReject: false,
+        imageRendering: 'wadors',
+        thumbnailRendering: 'wadors',
+        enableStudyLazyLoad: true,
+        supportsFuzzyMatching: false,
+        supportsWildcard: true,
+        staticWado: true,
+        singlepart: 'bulkdata,video',
+        bulkDataURI: {
+          enabled: true,
+          relativeResolution: 'studies',
+        },
+        omitQuotationForMultipartRequest: true,
+      },
+    },
+  ],
+  // oidc: [
+  //   {
+  //     authority: 'https://accounts.google.com',
+  //     client_id: '370953977065-o32uf5cn5f4bovtogdu862mlnhbcv9hk.apps.googleusercontent.com',
+  //     redirect_uri: '/callback',
+  //     response_type: 'id_token token',
+  //     scope:
+  //       'email profile openid https://www.googleapis.com/auth/cloudplatformprojects.readonly https://www.googleapis.com/auth/cloud-healthcare',
+  //     post_logout_redirect_uri: '/logout-redirect.html',
+  //     revoke_uri: 'https://accounts.google.com/o/oauth2/revoke?token=',
+  //     automaticSilentRenew: true,
+  //     revokeAccessTokenOnSignout: true,
   //   },
-  // },
+  // ],
 };
