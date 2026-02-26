@@ -14,6 +14,9 @@ const defaultProtocol = {
   modifiedDate: '2023-04-01',
   availableTo: {},
   editableBy: {},
+  callbacks: {
+    onViewportDataChanged: ['loadSegmentationsForActiveViewport'],
+  },
   protocolMatchingRules: [],
   toolGroupIds: ['default'],
   // -1 would be used to indicate active only, whereas other values are
