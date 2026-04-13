@@ -19,7 +19,7 @@ if [ "${CONFIG_ONLY}" != "True" ]; then
   export PUBLIC_URL='/v3/'
   # Same as root `install:frozen`: install exactly from yarn.lock (no resolver drift after dropping bun from CI).
   yarn install --frozen-lockfile --non-interactive
-  yarn run build
+  yarn run build --verbose
 else
   mkdir -p platform/viewer/dist/
 fi
