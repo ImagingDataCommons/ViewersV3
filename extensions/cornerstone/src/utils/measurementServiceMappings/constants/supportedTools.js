@@ -7,13 +7,14 @@ const supportedTools = [
   'Angle',
   'CobbAngle',
   'Probe',
+  'SRPoint',
   'RectangleROI',
+  'SRRectangleROI',
   'PlanarFreehandROI',
   'SplineROI',
   'LivewireContour',
   'UltrasoundDirectionalTool',
   'UltrasoundPleuraBLineTool',
-  'SCOORD3DPoint',
   'SegmentBidirectional',
 ];
 

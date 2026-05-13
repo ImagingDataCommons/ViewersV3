@@ -11,6 +11,7 @@ import { isDisplaySetFromUrl, sopInstanceLocation } from './custom-attribute/isD
 import numberOfDisplaySetsWithImages from './custom-attribute/numberOfDisplaySetsWithImages';
 import seriesDescriptionsFromDisplaySets from './custom-attribute/seriesDescriptionsFromDisplaySets';
 import uuidv4 from '../../utils/uuidv4';
+import { getUniqueAttributeFromList } from './lib/getUniqueAttributeFromList';
 
 type Protocol = HangingProtocol.Protocol | HangingProtocol.ProtocolGenerator;
 
@@ -77,15 +78,15 @@ export default class HangingProtocolService extends PubSubService {
     },
     ModalitiesInStudy: {
       name: 'Gets the array of the modalities for the series',
-      callback: metadata =>
-        metadata.ModalitiesInStudy ??
-        (metadata.series || []).reduce((prev, curr) => {
-          const { Modality } = curr;
-          if (Modality && prev.indexOf(Modality) == -1) {
-            prev.push(Modality);
-          }
-          return prev;
-        }, []),
+      callback: metadata => {
+        if (metadata.ModalitiesInStudy?.length > 0) {
+          return metadata.ModalitiesInStudy;
+        }
+        if (Array.isArray(metadata.series)) {
+          return getUniqueAttributeFromList(metadata.series, 'Modality');
+        }
+        return [];
+      },
     },
     isReconstructable: {
       name: 'Checks if the display set is reconstructable',
@@ -430,7 +431,10 @@ export default class HangingProtocolService extends PubSubService {
       this.customAttributeRetrievalCallbacks
     );
 
-    // Resets the full protocol status here.
+    this._commandsManager.run('detachProtocolViewportDataListener');
+    this._commandsManager.run('detachProtocolViewportDataChangedListener');
+
+    // Resets the full protocol status here
     this.protocol = null;
 
     if (protocolId && typeof protocolId === 'string') {
@@ -1032,6 +1036,10 @@ export default class HangingProtocolService extends PubSubService {
 
     try {
       if (!this.protocol || this.protocol.id !== protocol.id) {
+
+        this._commandsManager.run('detachProtocolViewportDataListener');
+        this._commandsManager.run('detachProtocolViewportDataChangedListener');
+
         this.stageIndex = options?.stageIndex || 0;
         //Reset load performed to false to re-fire loading strategy at new study opening
         this.customImageLoadPerformed = false;
@@ -1212,8 +1220,18 @@ export default class HangingProtocolService extends PubSubService {
 
     const { columns: numCols, rows: numRows, layoutOptions = [] } = layoutProps;
 
+    this._commandsManager.run('detachProtocolViewportDataListener');
+    this._commandsManager.run('detachProtocolViewportDataChangedListener');
+
     if (this.protocol?.callbacks?.onViewportDataInitialized) {
-      this._commandsManager.runCommand('attachProtocolViewportDataListener', {
+      this._commandsManager.run('attachProtocolViewportDataListener', {
+        protocol: this.protocol,
+        stageIndex: this.stageIndex,
+      });
+    }
+
+    if (this.protocol?.callbacks?.onViewportDataChanged) {
+      this._commandsManager.run('attachProtocolViewportDataChangedListener', {
         protocol: this.protocol,
         stageIndex: this.stageIndex,
       });
