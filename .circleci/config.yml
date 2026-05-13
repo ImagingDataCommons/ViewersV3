@@ -31,7 +31,7 @@ commands:
               CLIENT_EMAIL=${DEPLOYMENT_CLIENT_EMAIL_IDC_PROD}
               PROJECT_ID=${DEPLOYMENT_PROJECT_ID_IDC_PROD}
               BUCKET=${DEPLOYMENT_BUCKET_IDC_PROD}
-              DISABLE_MIN=False
+              DISABLE_MIN=True
               echo "Using production project and related deployment SA and bucket."
             elif [[ ${TIER} == "TEST" ]]; then
               KEY=${DEPLOYMENT_KEY_IDC_TEST}
