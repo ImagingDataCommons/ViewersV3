@@ -82,6 +82,9 @@
       "packageName": "@ohif/mode-basic"
     },
     {
+      "packageName": "@ohif/mode-segmentation"
+    },
+    {
       "packageName": "@ohif/mode-tmtv"
     },
     {
@@ -98,6 +101,10 @@
     {
       "packageName": "@ohif/mode-basic-dev-mode",
       "default": false,
+      "version": "3.0.0"
+    },
+    {
+      "packageName": "@ohif/mode-ultrasound-pleura-bline",
       "version": "3.0.0"
     },
     {
