@@ -195,7 +195,8 @@ function commandsModule({
 
   const loadDerivedDisplaySetsForActiveViewport = async (
     modalities: string[],
-    onLoadComplete: (displaySet: any, activeViewportId: string) => Promise<void> | void
+    onLoadComplete: (displaySet: any, activeViewportId: string) => Promise<void> | void,
+    filterDisplaySet?: (displaySet: DisplaySet) => boolean
   ): Promise<boolean> => {
     const activeViewportId = viewportGridService.getActiveViewportId();
     if (!activeViewportId) {
@@ -211,7 +212,10 @@ function commandsModule({
     }
 
     const primaryDisplaySetUID = displaySetInstanceUIDs[0];
-    const derivedDisplaySets = getDerivedData(modalities, primaryDisplaySetUID);
+    let derivedDisplaySets = getDerivedData(modalities, primaryDisplaySetUID);
+    if (filterDisplaySet) {
+      derivedDisplaySets = derivedDisplaySets.filter(filterDisplaySet);
+    }
     if (!derivedDisplaySets.length) {
       console.warn('No derived data found for active viewport!');
       return false;
@@ -278,6 +282,16 @@ function commandsModule({
 
   const actions = {
     loadSegmentationsForActiveViewport: async () => {
+      const initialSeriesInstanceUID = utils.getSplitParam('initialseriesinstanceuid');
+      if (!initialSeriesInstanceUID?.length) {
+        return;
+      }
+
+      const matchesInitialSeries = (displaySet: DisplaySet) =>
+        initialSeriesInstanceUID.some(
+          seriesUID => displaySet.SeriesInstanceUID === seriesUID
+        );
+
       console.info('Loading segmentations for active viewport...');
 
       const loaded = await loadDerivedDisplaySetsForActiveViewport(
@@ -292,7 +306,8 @@ function commandsModule({
             segmentationId: displaySet.displaySetInstanceUID,
             type: representationType,
           });
-        }
+        },
+        matchesInitialSeries
       );
 
       if (!loaded) {

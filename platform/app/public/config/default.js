@@ -397,6 +397,17 @@ window.config = {
       },
     },
   ],
+  modesConfiguration: {
+    '@ohif/mode-ultrasound-pleura-bline': {
+      hide: { $set: true },
+    },
+    '@ohif/mode-segmentation': {
+      hide: { $set: true },
+    },
+    'ohif-gcp-mode': {
+      hide: { $set: true },
+    }
+  },
   // oidc: [
   //   {
   //     authority: 'https://accounts.google.com',

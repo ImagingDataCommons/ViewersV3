@@ -1,5 +1,16 @@
 window.config = {
   routerBasename: '/v3',
+  modesConfiguration: {
+    '@ohif/mode-ultrasound-pleura-bline': {
+      hide: { $set: true },
+    },
+    '@ohif/mode-segmentation': {
+      hide: { $set: true },
+    },
+    'ohif-gcp-mode': {
+      hide: { $set: true },
+    }
+  },
   whiteLabeling: {
     createLogoComponentFn: function (React) {
       return React.createElement(
