@@ -195,7 +195,8 @@ function commandsModule({
 
   const loadDerivedDisplaySetsForActiveViewport = async (
     modalities: string[],
-    onLoadComplete: (displaySet: any, activeViewportId: string) => Promise<void> | void
+    onLoadComplete: (displaySet: any, activeViewportId: string) => Promise<void> | void,
+    filterDisplaySet?: (displaySet: DisplaySet) => boolean
   ): Promise<boolean> => {
     const activeViewportId = viewportGridService.getActiveViewportId();
     if (!activeViewportId) {
@@ -211,7 +212,10 @@ function commandsModule({
     }
 
     const primaryDisplaySetUID = displaySetInstanceUIDs[0];
-    const derivedDisplaySets = getDerivedData(modalities, primaryDisplaySetUID);
+    let derivedDisplaySets = getDerivedData(modalities, primaryDisplaySetUID);
+    if (filterDisplaySet) {
+      derivedDisplaySets = derivedDisplaySets.filter(filterDisplaySet);
+    }
     if (!derivedDisplaySets.length) {
       console.warn('No derived data found for active viewport!');
       return false;
@@ -278,6 +282,16 @@ function commandsModule({
 
   const actions = {
     loadSegmentationsForActiveViewport: async () => {
+      const initialSeriesInstanceUID = utils.getSplitParam('initialseriesinstanceuid');
+      if (!initialSeriesInstanceUID?.length) {
+        return;
+      }
+
+      const matchesInitialSeries = (displaySet: DisplaySet) =>
+        initialSeriesInstanceUID.some(
+          seriesUID => displaySet.SeriesInstanceUID === seriesUID
+        );
+
       console.info('Loading segmentations for active viewport...');
 
       const loaded = await loadDerivedDisplaySetsForActiveViewport(
@@ -288,16 +302,38 @@ function commandsModule({
               ? Enums.SegmentationRepresentations.Labelmap
               : Enums.SegmentationRepresentations.Contour;
 
-          segmentationService.addSegmentationRepresentation(activeViewportId, {
+          await segmentationService.addSegmentationRepresentation(activeViewportId, {
             segmentationId: displaySet.displaySetInstanceUID,
             type: representationType,
           });
-        }
+        },
+        matchesInitialSeries
       );
 
       if (!loaded) {
         console.warn('No derived segmentations found for active viewport');
         return;
+      }
+
+      const disableEditing = customizationService.getCustomization(
+        'panelSegmentation.disableEditing'
+      );
+      if (disableEditing) {
+        const activeViewportId = viewportGridService.getActiveViewportId();
+        const segmentationRepresentations = segmentationService.getSegmentationRepresentations(
+          activeViewportId
+        );
+
+        segmentationRepresentations.forEach(representation => {
+          const segmentIndices = Object.keys(representation.segments);
+          segmentIndices.forEach(segmentIndex => {
+            segmentationService.setSegmentLocked(
+              representation.segmentationId,
+              parseInt(segmentIndex),
+              true
+            );
+          });
+        });
       }
 
       console.info('Segmentations loaded for active viewport.');

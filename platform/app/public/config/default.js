@@ -6,7 +6,12 @@ window.config = {
   // whiteLabeling: {},
   extensions: [],
   modes: [],
-  customizationService: {},
+  customizationService: [
+    {
+      'panelSegmentation.disableEditing': { $set: true },
+      'panelMeasurement.disableEditing': { $set: true },
+    },
+  ],
   showStudyList: true,
   // some windows systems have issues with more than 3 web workers
   maxNumberOfWebWorkers: 3,
@@ -251,6 +256,12 @@ window.config = {
       configuration: {
         friendlyName: 'dicomweb delegating proxy',
         name: 'dicomwebproxy',
+        // Security controls for runtime ?url=... datasource loading:
+        // In authenticated environments, runtime ?url origins must be allowlisted:
+        // dangerouslyAllowedOriginsForAuthenticatedEnvironments: [
+        //   'https://config.example.com',
+        //   'http://localhost:5000',
+        // ],
       },
     },
     {
@@ -259,6 +270,12 @@ window.config = {
       configuration: {
         friendlyName: 'dicom json',
         name: 'json',
+        // Security controls for runtime ?url=... datasource loading:
+        // In authenticated environments, runtime ?url origins must be allowlisted:
+        // dangerouslyAllowedOriginsForAuthenticatedEnvironments: [
+        //   'https://config.example.com',
+        //   'http://localhost:5000',
+        // ],
       },
     },
     {
@@ -324,7 +341,6 @@ window.config = {
     ],
   },
   disableConfirmationPrompts: true,
-  disableEditing: true,
   defaultDataSourceName: 'ohif',
   dataSources: [
     {
@@ -381,6 +397,17 @@ window.config = {
       },
     },
   ],
+  modesConfiguration: {
+    '@ohif/mode-ultrasound-pleura-bline': {
+      hide: true,
+    },
+    '@ohif/mode-segmentation': {
+      hide: true,
+    },
+    'ohif-gcp-mode': {
+      hide: true,
+    }
+  },
   // oidc: [
   //   {
   //     authority: 'https://accounts.google.com',

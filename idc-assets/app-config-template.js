@@ -1,5 +1,16 @@
 window.config = {
   routerBasename: '/v3',
+  modesConfiguration: {
+    '@ohif/mode-ultrasound-pleura-bline': {
+      hide: true,
+    },
+    '@ohif/mode-segmentation': {
+      hide: true,
+    },
+    'ohif-gcp-mode': {
+      hide: true,
+    }
+  },
   whiteLabeling: {
     createLogoComponentFn: function (React) {
       return React.createElement(
@@ -39,10 +50,15 @@ window.config = {
   },
   extensions: [],
   modes: [],
-  customizationService: {},
+  customizationService: [
+    {
+      'studyBrowser.studyMode': { $set: 'primary' },
+      'panelSegmentation.disableEditing': { $set: true },
+      'panelMeasurement.disableEditing': { $set: true },
+    }
+  ],
   showStudyList: false,
   disableConfirmationPrompts: true,
-  disableEditing: true,
   // some windows systems have issues with more than 3 web workers
   maxNumberOfWebWorkers: 3,
   // below flag is for performance reasons, but it might not work for all servers
