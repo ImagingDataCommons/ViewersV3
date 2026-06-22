@@ -2,6 +2,7 @@ import { Icons } from '@ohif/ui-next';
 
 import DownloadStudySeriesDialog from './DownloadStudySeriesDialog';
 import { ReactComponent as downloadIcon } from '../assets/icons/download.svg';
+import { registerInstanceAnnotations } from './instanceAnnotations';
 
 import { id } from './id';
 
@@ -10,9 +11,17 @@ const extension = {
   preRegistration: () => {
     Icons.addIcon('download', downloadIcon);
   },
-  onModeEnter: ({ servicesManager }) => {
+  onModeEnter: ({ servicesManager, extensionManager }) => {
     const { toolbarService, UIModalService, viewportGridService, displaySetService } =
       servicesManager.services;
+
+    // Instance level SR qualitative annotations (TID 1500 / TID 1501).
+    // See https://github.com/OHIF/Viewers/issues/3358
+    const appConfig = extensionManager?.appConfig ?? {};
+    registerInstanceAnnotations({
+      servicesManager,
+      config: appConfig.instanceAnnotations,
+    });
 
     const moreTools = [
       {
