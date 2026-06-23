@@ -15,8 +15,6 @@ const extension = {
     const { toolbarService, UIModalService, viewportGridService, displaySetService } =
       servicesManager.services;
 
-    // Instance level SR qualitative annotations (TID 1500 / TID 1501).
-    // See https://github.com/OHIF/Viewers/issues/3358
     const appConfig = extensionManager?.appConfig ?? {};
     registerInstanceAnnotations({
       servicesManager,
