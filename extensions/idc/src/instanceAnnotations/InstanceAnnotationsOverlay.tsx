@@ -22,14 +22,28 @@ const DEFAULT_CONFIG: Required<InstanceAnnotationsConfig> = {
   colors: ['#5acce6', '#fcfa6b', '#7ee37e', '#f7a35c', '#e67ee6', '#ff7f7f'],
 };
 
-/** Deterministically maps a concept label to a color from the palette. */
-function colorForLabel(label: string, colors: string[]): string {
+/** Deterministically maps a string to a color from the palette. */
+function colorForKey(key: string, colors: string[]): string {
   let hash = 0;
-  for (let i = 0; i < label.length; i++) {
-    hash = (hash * 31 + label.charCodeAt(i)) | 0;
+  for (let i = 0; i < key.length; i++) {
+    hash = (hash * 31 + key.charCodeAt(i)) | 0;
   }
   const index = Math.abs(hash) % colors.length;
   return colors[index];
+}
+
+/**
+ * Picks a stable color for an annotation based on its coded value (so different
+ * findings such as "Head" and "Neck" get different colors), falling back to the
+ * value text and finally the concept label.
+ */
+function colorForAnnotation(annotation: InstanceAnnotation, colors: string[]): string {
+  const key =
+    (annotation.codeValue &&
+      `${annotation.codingSchemeDesignator ?? ''}:${annotation.codeValue}`) ||
+    annotation.value ||
+    annotation.label;
+  return colorForKey(key, colors);
 }
 
 function buildTooltip(annotation: InstanceAnnotation): string {
@@ -59,17 +73,21 @@ function AnnotationLabel({
   const modifierSuffix = annotation.modifiers?.length
     ? ` (${annotation.modifiers.map(m => m.value).join(', ')})`
     : '';
+  const color = config.showColor ? colorForAnnotation(annotation, config.colors) : undefined;
 
   const content = (
     <div className="overlay-item flex flex-row items-center">
       {config.showColor && (
         <span
-          className="mr-1 inline-block h-2 w-2 shrink-0 rounded-full"
-          style={{ backgroundColor: colorForLabel(annotation.label, config.colors) }}
+          className="mr-1 inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+          style={{ backgroundColor: color }}
         />
       )}
       <span className="mr-1 shrink-0 opacity-[0.70]">{annotation.label}:</span>
-      <span className="shrink-0">
+      <span
+        className="shrink-0 font-bold"
+        style={{ color }}
+      >
         {annotation.value}
         {modifierSuffix}
       </span>
