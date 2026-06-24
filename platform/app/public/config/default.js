@@ -404,7 +404,7 @@ window.config = {
     '@ohif/mode-segmentation': {
       hide: true,
     },
-    'ohif-gcp-mode': {
+    '@idc/gcp-mode': {
       hide: true,
     }
   },
