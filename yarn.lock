@@ -2445,6 +2445,18 @@
   resolved "https://registry.yarnpkg.com/@icr/polyseg-wasm/-/polyseg-wasm-0.4.0.tgz#755e23d07c3d8d8fca1113278c803c1ef0185da0"
   integrity sha512-3sZmiwG8I0NaqPle0L7+V/ZexiR7IjIUFkUsaOoFI9rNuBGyyMMmxAxnCmqcDFtBDk9h+JEYJf6e3NnqlHi/HQ==
 
+"@idc/gcp-extension@https://github.com/ImagingDataCommons/ohif-gcp-extension#d006293822c5d1a8c831ac7606373e9c0d4807a1":
+  version "0.0.1"
+  resolved "https://github.com/ImagingDataCommons/ohif-gcp-extension#d006293822c5d1a8c831ac7606373e9c0d4807a1"
+  dependencies:
+    "@babel/runtime" "^7.20.13"
+
+"@idc/gcp-mode@https://github.com/ImagingDataCommons/ohif-gcp-mode#b1aab90176abde2adc5ab9e35d21289936317e0d":
+  version "0.0.1"
+  resolved "https://github.com/ImagingDataCommons/ohif-gcp-mode#b1aab90176abde2adc5ab9e35d21289936317e0d"
+  dependencies:
+    "@babel/runtime" "^7.20.13"
+
 "@inquirer/ansi@^1.0.0", "@inquirer/ansi@^1.0.2":
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/@inquirer/ansi/-/ansi-1.0.2.tgz#674a4c4d81ad460695cb2a1fc69d78cd187f337e"
@@ -14953,18 +14965,6 @@ obuf@^1.0.0, obuf@^1.1.2:
   version "1.1.2"
   resolved "https://registry.yarnpkg.com/obuf/-/obuf-1.1.2.tgz#09bea3343d41859ebd446292d11c9d4db619084e"
   integrity sha512-PX1wu0AmAdPqOL1mWhqmlOd8kOIZQwGZw6rh7uby9fTc5lhaOWFLX3I6R1hrF9k3zUY40e6igsLGkDXK92LJNg==
-
-"ohif-gcp-extension@https://github.com/ImagingDataCommons/ohif-gcp-extension#main":
-  version "0.0.1"
-  resolved "https://github.com/ImagingDataCommons/ohif-gcp-extension#5b0f1abd847d531792e340f302e3e9f6eed685ec"
-  dependencies:
-    "@babel/runtime" "^7.20.13"
-
-"ohif-gcp-mode@https://github.com/ImagingDataCommons/ohif-gcp-mode#main":
-  version "0.0.1"
-  resolved "https://github.com/ImagingDataCommons/ohif-gcp-mode#38ebce6eea27a939442c0847257c0197f5ffd592"
-  dependencies:
-    "@babel/runtime" "^7.20.13"
 
 oidc-client-ts@3.3.0:
   version "3.3.0"
