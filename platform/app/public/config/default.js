@@ -398,9 +398,6 @@ window.config = {
     },
   ],
   modesConfiguration: {
-    '@ohif/mode-ultrasound-pleura-bline': {
-      hide: true,
-    },
     '@ohif/mode-segmentation': {
       hide: true,
     },

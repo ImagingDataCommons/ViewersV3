@@ -1,9 +1,6 @@
 window.config = {
   routerBasename: '/v3',
   modesConfiguration: {
-    '@ohif/mode-ultrasound-pleura-bline': {
-      hide: true,
-    },
     '@ohif/mode-segmentation': {
       hide: true,
     },
