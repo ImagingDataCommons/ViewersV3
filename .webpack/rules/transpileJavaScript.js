@@ -17,13 +17,13 @@ function transpileJavaScript(mode) {
           // https://github.com/openlayers/openlayers#supported-browsers
           // 'ol', --> Should be fine
           // Add GCP extensions that need TypeScript transpilation
-          'ohif-gcp-extension',
-          'ohif-gcp-mode',
+          '@idc/gcp-extension',
+          '@idc/gcp-mode',
         ])
       : excludeNodeModulesExcept([
           // Add GCP extensions that need TypeScript transpilation
-          'ohif-gcp-extension',
-          'ohif-gcp-mode',
+          '@idc/gcp-extension',
+          '@idc/gcp-mode',
         ]);
 
   return {

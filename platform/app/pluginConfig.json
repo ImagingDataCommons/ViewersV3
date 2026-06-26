@@ -70,7 +70,7 @@
       "packageName": "@ohif/extension-idc"
     },
     {
-      "packageName": "ohif-gcp-extension",
+      "packageName": "@idc/gcp-extension",
       "version": "0.0.1"
     }
   ],
@@ -108,7 +108,7 @@
       "version": "3.0.0"
     },
     {
-      "packageName": "ohif-gcp-mode",
+      "packageName": "@idc/gcp-mode",
       "version": "0.0.1"
     }
   ],
