@@ -3,6 +3,39 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [3.12.5](https://github.com/OHIF/Viewers/compare/v3.12.4...v3.12.5) (2026-06-17)
+
+
+### Bug Fixes
+
+* **security:** Update dependencies to fix security vulnerabilities. Release 3.12.5 ([#6086](https://github.com/OHIF/Viewers/issues/6086)) ([f5f086c](https://github.com/OHIF/Viewers/commit/f5f086cd953bfcb783276fbb8d687e05fa118725))
+
+
+
+
+
+## [3.12.4](https://github.com/OHIF/Viewers/compare/v3.12.3...v3.12.4) (2026-06-05)
+
+
+### Bug Fixes
+
+* **security:** Update axios to fix security vulnerabilities. Release 3.12.4 ([#6064](https://github.com/OHIF/Viewers/issues/6064)) ([62917c2](https://github.com/OHIF/Viewers/commit/62917c214246233b7b76aa8926fdfd645a2385a7))
+
+
+
+
+
+## [3.12.3](https://github.com/OHIF/Viewers/compare/v3.12.2...v3.12.3) (2026-05-27)
+
+
+### Bug Fixes
+
+* **security:** Add tmp as a resolution to fix security vulnerability. Trigger release 3.12.3. ([#6045](https://github.com/OHIF/Viewers/issues/6045)) ([fb4441b](https://github.com/OHIF/Viewers/commit/fb4441ba71ec95dd494d120152a61df9261024cb))
+
+
+
+
+
 ## [3.12.2](https://github.com/OHIF/Viewers/compare/v3.12.1...v3.12.2) (2026-05-18)
 
 
