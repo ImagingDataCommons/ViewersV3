@@ -1,14 +1,11 @@
 window.config = {
   routerBasename: '/v3',
   modesConfiguration: {
-    '@ohif/mode-ultrasound-pleura-bline': {
-      hide: { $set: true },
-    },
     '@ohif/mode-segmentation': {
-      hide: { $set: true },
+      hide: true,
     },
-    'ohif-gcp-mode': {
-      hide: { $set: true },
+    '@idc/gcp-mode': {
+      hide: true,
     }
   },
   whiteLabeling: {
