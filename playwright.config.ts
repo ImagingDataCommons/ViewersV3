@@ -2,9 +2,11 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests',
+  globalSetup: './tests/globalSetup.ts',
   fullyParallel: !!process.env.CI,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 3 : 0,
+  retries: process.env.CI ? 1 : 0,
+  maxFailures: process.env.CI ? 10 : undefined,
   workers: process.env.CI ? 6 : undefined,
   snapshotPathTemplate: './tests/screenshots{/projectName}/{testFilePath}/{arg}{ext}',
   outputDir: './tests/test-results',
@@ -20,6 +22,8 @@ export default defineConfig({
     launchOptions: {
       // do not hide the scrollbars so that we can assert their look-and-feel
       ignoreDefaultArgs: ['--hide-scrollbars'],
+      // Do not force OHIF nashua's `--use-gl=egl` here: ImagingDataCommons/ViewersV3
+      // runs Playwright on GitHub-hosted ubuntu runners (no nashua GPU/EGL stack).
     },
   },
 
@@ -42,7 +46,8 @@ export default defineConfig({
     //},
   ],
   webServer: {
-    command: 'cross-env APP_CONFIG=config/e2e.js COVERAGE=true OHIF_PORT=3335 nyc yarn start',
+    command:
+      'cross-env APP_CONFIG=config/e2e.js COVERAGE=true OHIF_PORT=3335 OHIF_OPEN=false nyc yarn start',
     url: 'http://localhost:3335',
     reuseExistingServer: !process.env.CI,
     timeout: 360_000,

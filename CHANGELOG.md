@@ -3,6 +3,69 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [3.12.11](https://github.com/OHIF/Viewers/compare/v3.12.10...v3.12.11) (2026-08-03)
+
+
+### Bug Fixes
+
+* **security:** update dependencies to fix brace-expansion vulnerabilities and release 3.12.11 ([#6203](https://github.com/OHIF/Viewers/issues/6203)) ([b8c90b6](https://github.com/OHIF/Viewers/commit/b8c90b6c493ad09268d403b17ac97534c65d5c99))
+
+
+
+
+
+## [3.12.10](https://github.com/OHIF/Viewers/compare/v3.12.9...v3.12.10) (2026-07-24)
+
+
+### Bug Fixes
+
+* **security:** update postcss to 8.5.22 and release 3.12.10 ([#6182](https://github.com/OHIF/Viewers/issues/6182)) ([6c696e0](https://github.com/OHIF/Viewers/commit/6c696e0def2b5fddc3c11f3d49656466d368d754))
+
+
+
+
+
+## [3.12.9](https://github.com/OHIF/Viewers/compare/v3.12.8...v3.12.9) (2026-07-23)
+
+
+### Bug Fixes
+
+* **security:** update dependencies to fix security vulnerabilities and release 3.12.9 ([#6178](https://github.com/OHIF/Viewers/issues/6178)) ([b74ffcf](https://github.com/OHIF/Viewers/commit/b74ffcf101c5636da079e7756632f5c2df8e67ad))
+
+
+
+
+
+## [3.12.8](https://github.com/OHIF/Viewers/compare/v3.12.7...v3.12.8) (2026-07-21)
+
+
+### Bug Fixes
+
+* **security:** update dependencies to fix security vulnerabilities ([#6170](https://github.com/OHIF/Viewers/issues/6170)) ([c09feca](https://github.com/OHIF/Viewers/commit/c09feca1ce0d9836d3c8efa9280380818855740a))
+
+
+
+
+
+## [3.12.7](https://github.com/OHIF/Viewers/compare/v3.12.6...v3.12.7) (2026-07-17)
+
+
+### Bug Fixes
+
+* **security:** update websocket-driver to 0.7.5 ([#6158](https://github.com/OHIF/Viewers/issues/6158)) ([e8fff26](https://github.com/OHIF/Viewers/commit/e8fff26067ddf1fed5b6be8d3e6b3ca93f1857be))
+
+
+
+
+
+## [3.12.6](https://github.com/OHIF/Viewers/compare/v3.12.5...v3.12.6) (2026-07-07)
+
+**Note:** Version bump only for package ohif-monorepo-root
+
+
+
+
+
 ## [3.12.5](https://github.com/OHIF/Viewers/compare/v3.12.4...v3.12.5) (2026-06-17)
 
 
