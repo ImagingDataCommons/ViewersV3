@@ -22,10 +22,8 @@ export default defineConfig({
     launchOptions: {
       // do not hide the scrollbars so that we can assert their look-and-feel
       ignoreDefaultArgs: ['--hide-scrollbars'],
-      // Use the runner's EGL GPU stack for WebGL. Without this, Chromium falls
-      // back to software GL on the self-hosted (nashua) runner and cornerstone
-      // rendering produces wrong/blank frames, failing every screenshot test.
-      args: ['--use-gl=egl'],
+      // Do not force OHIF nashua's `--use-gl=egl` here: ImagingDataCommons/ViewersV3
+      // runs Playwright on GitHub-hosted ubuntu runners (no nashua GPU/EGL stack).
     },
   },
 
