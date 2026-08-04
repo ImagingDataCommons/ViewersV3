@@ -3,6 +3,54 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [3.12.11](https://github.com/OHIF/Viewers/compare/v3.12.10...v3.12.11) (2026-08-03)
+
+**Note:** Version bump only for package @ohif/ui
+
+
+
+
+
+## [3.12.10](https://github.com/OHIF/Viewers/compare/v3.12.9...v3.12.10) (2026-07-24)
+
+**Note:** Version bump only for package @ohif/ui
+
+
+
+
+
+## [3.12.9](https://github.com/OHIF/Viewers/compare/v3.12.8...v3.12.9) (2026-07-23)
+
+**Note:** Version bump only for package @ohif/ui
+
+
+
+
+
+## [3.12.8](https://github.com/OHIF/Viewers/compare/v3.12.7...v3.12.8) (2026-07-21)
+
+**Note:** Version bump only for package @ohif/ui
+
+
+
+
+
+## [3.12.7](https://github.com/OHIF/Viewers/compare/v3.12.6...v3.12.7) (2026-07-17)
+
+**Note:** Version bump only for package @ohif/ui
+
+
+
+
+
+## [3.12.6](https://github.com/OHIF/Viewers/compare/v3.12.5...v3.12.6) (2026-07-07)
+
+**Note:** Version bump only for package @ohif/ui
+
+
+
+
+
 ## [3.12.5](https://github.com/OHIF/Viewers/compare/v3.12.4...v3.12.5) (2026-06-17)
 
 **Note:** Version bump only for package @ohif/ui
