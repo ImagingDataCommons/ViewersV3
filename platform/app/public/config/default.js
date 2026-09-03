@@ -3,7 +3,6 @@
 window.config = {
   name: 'config/default.js',
   routerBasename: null,
-  // whiteLabeling: {},
   extensions: [],
   modes: [],
   customizationService: [
@@ -13,9 +12,7 @@ window.config = {
     },
   ],
   showStudyList: true,
-  // some windows systems have issues with more than 3 web workers
   maxNumberOfWebWorkers: 3,
-  // below flag is for performance reasons, but it might not work for all servers
   showWarningMessageForCrossOrigin: true,
   showCPUFallbackMessage: true,
   showLoadingIndicator: true,
@@ -26,13 +23,9 @@ window.config = {
   maxNumRequests: {
     interaction: 100,
     thumbnail: 75,
-    // Prefetch number is dependent on the http protocol. For http 2 or
-    // above, the number of requests can be go a lot higher.
     prefetch: 25,
   },
-  showErrorDetails: 'always', // 'always', 'dev', 'production'
-  // filterQueryParam: false,
-  // Defines multi-monitor layouts
+  showErrorDetails: 'always',
   multimonitor: [
     {
       id: 'split',
@@ -63,7 +56,6 @@ window.config = {
         },
       ],
     },
-
     {
       id: '2',
       test: ({ multimonitor }) => multimonitor === '2',
@@ -94,16 +86,6 @@ window.config = {
     },
   ],
   defaultDataSourceName: 'ohif',
-  /* Dynamic config allows user to pass "configUrl" query string this allows to load config without recompiling application. The regex will ensure valid configuration source */
-  // dangerouslyUseDynamicConfig: {
-  //   enabled: true,
-  //   // regex will ensure valid configuration source and default is /.*/ which matches any character. To use this, setup your own regex to choose a specific source of configuration only.
-  //   // Example 1, to allow numbers and letters in an absolute or sub-path only.
-  //   // regex: /(0-9A-Za-z.]+)(\/[0-9A-Za-z.]+)*/
-  //   // Example 2, to restricts to either hosptial.com or othersite.com.
-  //   // regex: /(https:\/\/hospital.com(\/[0-9A-Za-z.]+)*)|(https:\/\/othersite.com(\/[0-9A-Za-z.]+)*)/
-  //   regex: /.*/,
-  // },
   dataSources: [
     {
       namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
@@ -122,9 +104,6 @@ window.config = {
         supportsWildcard: false,
         staticWado: true,
         singlepart: 'bulkdata,video',
-        // whether the data source should use retrieveBulkData to grab metadata,
-        // and in case of relative path, what would it be relative to, options
-        // are in the series level or study level (some servers like series some study)
         bulkDataURI: {
           enabled: true,
           relativeResolution: 'studies',
@@ -133,7 +112,6 @@ window.config = {
         omitQuotationForMultipartRequest: true,
       },
     },
-
     {
       namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
       sourceName: 'ohif2',
@@ -152,9 +130,6 @@ window.config = {
         supportsWildcard: true,
         staticWado: true,
         singlepart: 'bulkdata,video',
-        // whether the data source should use retrieveBulkData to grab metadata,
-        // and in case of relative path, what would it be relative to, options
-        // are in the series level or study level (some servers like series some study)
         bulkDataURI: {
           enabled: true,
           relativeResolution: 'studies',
@@ -180,9 +155,6 @@ window.config = {
         supportsWildcard: true,
         staticWado: true,
         singlepart: 'bulkdata,video',
-        // whether the data source should use retrieveBulkData to grab metadata,
-        // and in case of relative path, what would it be relative to, options
-        // are in the series level or study level (some servers like series some study)
         bulkDataURI: {
           enabled: true,
           relativeResolution: 'studies',
@@ -190,7 +162,6 @@ window.config = {
         omitQuotationForMultipartRequest: true,
       },
     },
-
     {
       namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
       sourceName: 'local5000',
@@ -235,33 +206,15 @@ window.config = {
         omitQuotationForMultipartRequest: true,
         bulkDataURI: {
           enabled: true,
-          // This is an example config that can be used to fix the retrieve URL
-          // where it has the wrong prefix (eg a canned prefix).  It is better to
-          // just use the correct prefix out of the box, but that is sometimes hard
-          // when URLs go through several systems.
-          // Example URLS are:
-          // "BulkDataURI" : "http://localhost/dicom-web/studies/1.2.276.0.7230010.3.1.2.2344313775.14992.1458058363.6979/series/1.2.276.0.7230010.3.1.3.1901948703.36080.1484835349.617/instances/1.2.276.0.7230010.3.1.4.1901948703.36080.1484835349.618/bulk/00420011",
-          // when running on http://localhost:3003 with no server running on localhost.  This can be corrected to:
-          // /orthanc/dicom-web/studies/1.2.276.0.7230010.3.1.2.2344313775.14992.1458058363.6979/series/1.2.276.0.7230010.3.1.3.1901948703.36080.1484835349.617/instances/1.2.276.0.7230010.3.1.4.1901948703.36080.1484835349.618/bulk/00420011
-          // which is a valid relative URL, and will result in using the http://localhost:3003/orthanc/.... path
-          // startsWith: 'http://localhost/',
-          // prefixWith: '/orthanc/',
         },
       },
     },
-
     {
       namespace: '@ohif/extension-default.dataSourcesModule.dicomwebproxy',
       sourceName: 'dicomwebproxy',
       configuration: {
         friendlyName: 'dicomweb delegating proxy',
         name: 'dicomwebproxy',
-        // Security controls for runtime ?url=... datasource loading:
-        // In authenticated environments, runtime ?url origins must be allowlisted:
-        // dangerouslyAllowedOriginsForAuthenticatedEnvironments: [
-        //   'https://config.example.com',
-        //   'http://localhost:5000',
-        // ],
       },
     },
     {
@@ -270,12 +223,6 @@ window.config = {
       configuration: {
         friendlyName: 'dicom json',
         name: 'json',
-        // Security controls for runtime ?url=... datasource loading:
-        // In authenticated environments, runtime ?url origins must be allowlisted:
-        // dangerouslyAllowedOriginsForAuthenticatedEnvironments: [
-        //   'https://config.example.com',
-        //   'http://localhost:5000',
-        // ],
       },
     },
     {
@@ -287,20 +234,9 @@ window.config = {
     },
   ],
   httpErrorHandler: error => {
-    // This is 429 when rejected from the public idc sandbox too often.
     console.warn(error.status);
-
-    // Could use services manager here to bring up a dialog/modal if needed.
     console.warn('test, navigate to https://ohif.org/');
   },
-  // segmentation: {
-  //   segmentLabel: {
-  //     enabledByDefault: true,
-  //     labelColor: [255, 255, 0, 1], // must be an array
-  //     hoverTimeout: 1,
-  //     background: 'rgba(100, 100, 100, 0.5)', // can be any valid css color
-  //   },
-  // },
 };
 
 /** IDC Specific */
@@ -323,6 +259,12 @@ window.config = {
       );
     },
   },
+  defaultDataSourceName: 'idc-dicomweb',
+  instanceAnnotations: {
+    enabled: true,
+    maxLabels: 10,
+    showColor: true,
+  },
   idcDownloadCommandsDialog: {
     description: 'Follow the instructions below to download the study or series:',
     instructions: [
@@ -331,17 +273,16 @@ window.config = {
         label: 'First, install the idc-index python package:',
       },
       {
-        command: `idc download {{StudyInstanceUID}}`,
+        command: 'idc download {{StudyInstanceUID}}',
         label: 'Then, to download the whole study, run:',
       },
       {
-        command: `idc download {{SeriesInstanceUID}}`,
+        command: 'idc download {{SeriesInstanceUID}}',
         label: "Or, to download just the active viewport's series, run:",
       },
     ],
   },
   disableConfirmationPrompts: true,
-  defaultDataSourceName: 'ohif',
   dataSources: [
     {
       friendlyName: 'dcmjs DICOMWeb Server',
@@ -401,22 +342,19 @@ window.config = {
     '@ohif/mode-segmentation': {
       hide: true,
     },
-    '@idc/gcp-mode': {
-      hide: true,
-    }
   },
-  // oidc: [
-  //   {
-  //     authority: 'https://accounts.google.com',
-  //     client_id: '370953977065-o32uf5cn5f4bovtogdu862mlnhbcv9hk.apps.googleusercontent.com',
-  //     redirect_uri: '/callback',
-  //     response_type: 'id_token token',
-  //     scope:
-  //       'email profile openid https://www.googleapis.com/auth/cloudplatformprojects.readonly https://www.googleapis.com/auth/cloud-healthcare',
-  //     post_logout_redirect_uri: '/logout-redirect.html',
-  //     revoke_uri: 'https://accounts.google.com/o/oauth2/revoke?token=',
-  //     automaticSilentRenew: true,
-  //     revokeAccessTokenOnSignout: true,
-  //   },
-  // ],
+  oidc: [
+    {
+      authority: 'https://accounts.google.com',
+      client_id: '370953977065-o32uf5cn5f4bovtogdu862mlnhbcv9hk.apps.googleusercontent.com',
+      redirect_uri: '/callback',
+      response_type: 'id_token token',
+      scope:
+        'email profile openid https://www.googleapis.com/auth/cloudplatformprojects.readonly https://www.googleapis.com/auth/cloud-healthcare',
+      post_logout_redirect_uri: '/logout-redirect.html',
+      revoke_uri: 'https://accounts.google.com/o/oauth2/revoke?token=',
+      automaticSilentRenew: true,
+      revokeAccessTokenOnSignout: true,
+    },
+  ],
 };

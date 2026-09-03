@@ -1,0 +1,30 @@
+diff --git a/node_modules/@cornerstonejs/adapters/dist/esm/adapters/Cornerstone/Segmentation_4X.js b/node_modules/@cornerstonejs/adapters/dist/esm/adapters/Cornerstone/Segmentation_4X.js
+index a3b8414..19ca9bd 100644
+--- a/node_modules/@cornerstonejs/adapters/dist/esm/adapters/Cornerstone/Segmentation_4X.js
++++ b/node_modules/@cornerstonejs/adapters/dist/esm/adapters/Cornerstone/Segmentation_4X.js
+@@ -1055,12 +1055,19 @@ function alignPixelDataWithSourceData(pixelData2D, iop, orientations, tolerance)
+ }
+ function getSegmentMetadata(multiframe, seriesInstanceUid) {
+   const segmentSequence = multiframe.SegmentSequence;
+-  let data = [];
+-  if (Array.isArray(segmentSequence)) {
+-    data = [undefined, ...segmentSequence];
+-  } else {
+-    // Only one segment, will be stored as an object.
+-    data = [undefined, segmentSequence];
++  const data = [];
++  /**
++   * Index segments by their SegmentNumber rather than array position.
++   * This is required for LABELMAP segmentations where SegmentNumber may
++   * start at 0 (for background) or have gaps. The DICOM standard only
++   * requires SegmentNumber >= 1 for BINARY/FRACTIONAL types, but LABELMAP
++   * allows more flexibility (see DICOM Part 3, Section C.8.20.2.4).
++   */
++  const segments = Array.isArray(segmentSequence) ? segmentSequence : [segmentSequence];
++  for (const segment of segments) {
++    if (segment?.SegmentNumber >= 0) {
++      data[segment.SegmentNumber] = segment;
++    }
+   }
+   return {
+     seriesInstanceUid,
