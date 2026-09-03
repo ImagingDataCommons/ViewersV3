@@ -261,9 +261,10 @@ window.config = {
   },
   defaultDataSourceName: 'idc-dicomweb',
   instanceAnnotations: {
-    enabled: true,
-    maxLabels: 10,
-    showColor: true,
+    enabled: true, // master switch
+    maxLabels: 10, // collapse extra labels into a "+N more" indicator
+    showColor: true, // render a colored dot before each label
+    // colors: ['#5acce6', '#fcfa6b', '#7ee37e', '#f7a35c', '#e67ee6', '#ff7f7f'],
   },
   idcDownloadCommandsDialog: {
     description: 'Follow the instructions below to download the study or series:',
