@@ -9,8 +9,10 @@ concurrency:
 
 jobs:
   playwright-tests:
-    timeout-minutes: 60
-    runs-on: self-hosted
+    # IDC fork has no OHIF "nashua" self-hosted runners. Use GitHub-hosted
+    # runners so PR checks complete instead of sitting queued forever.
+    timeout-minutes: 120
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
@@ -28,7 +30,10 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
       - name: Install Playwright browsers
-        run: npx playwright install
+        # Only chromium is used (firefox/webkit projects are commented out in
+        # playwright.config.ts). Scoping the install to chromium avoids
+        # downloading + dep-validating browsers we never launch.
+        run: npx playwright install --with-deps chromium
       - name: Run Playwright tests
         run: |
           export NODE_OPTIONS="--max_old_space_size=10192"
