@@ -40,7 +40,8 @@ const convertSites = (codingValues, sites) => {
 /**
  * Hydrates a structured report
  * Handles 2d and 3d hydration from SCOORD and SCOORD3D points
- * For 3D: chooses a volume display set. For 2D: chooses the first display set containing the referenced image.
+ * For 3D hydration, chooses a volume display set to display with
+ * FOr 2D hydration, chooses the (first) display set containing the referenced image.
  */
 export default function hydrateStructuredReport(
   { servicesManager, extensionManager, commandsManager }: withAppTypes,
@@ -50,6 +51,7 @@ export default function hydrateStructuredReport(
   const { measurementService, displaySetService, customizationService } = servicesManager.services;
 
   const codingValues = customizationService.getCustomization('codingValues');
+  const disableEditing = customizationService.getCustomization('panelMeasurement.disableEditing');
 
   const displaySet = displaySetService.getDisplaySetByUID(displaySetInstanceUID);
   const {
@@ -78,15 +80,21 @@ export default function hydrateStructuredReport(
     const { ReferencedSOPInstanceUID, imageId, frameNumber = 1 } = measurement;
     const key = `${ReferencedSOPInstanceUID}:${frameNumber}`;
 
-    if (!sopInstanceUIDToImageId[key]) {
+    if (imageId && !sopInstanceUIDToImageId[key]) {
       sopInstanceUIDToImageId[key] = imageId;
     }
   });
 
+  // Mapping of legacy datasets is now directly handled by adapters module
   const datasetToUse = instance;
+
+  // Use CS3D adapters to generate toolState.
   let storedMeasurementByAnnotationType = MeasurementReport.generateToolState(
     datasetToUse,
-    /** dcmjs needs imageIds for imageToWorld; assumes displaySet.measurements order matches instance measurementGroups */
+    // NOTE: we need to pass in the imageIds to dcmjs since the we use them
+    // for the imageToWorld transformation. The following assumes that the order
+    // that measurements were added to the display set are the same order as
+    // the measurementGroups in the instance.
     sopInstanceUIDToImageId,
     metaData
   );
@@ -100,6 +108,7 @@ export default function hydrateStructuredReport(
     });
   }
 
+  // Filter what is found by DICOM SR to measurements we support.
   const mappingDefinitions = mappings.map(m => m.annotationType);
   const hydratableMeasurementsInSR = {};
 
@@ -109,36 +118,17 @@ export default function hydrateStructuredReport(
     }
   });
 
-  const imageIds = [];
-
-  // TODO: notification if no hydratable?
-  Object.keys(hydratableMeasurementsInSR).forEach(annotationType => {
-    const toolDataForAnnotationType = hydratableMeasurementsInSR[annotationType];
-
-    toolDataForAnnotationType.forEach(toolData => {
-      const frameNumber = toolData.annotation.data?.frameNumber || 1;
-      const imageId = sopInstanceUIDToImageId[`${toolData.sopInstanceUid}:${frameNumber}`];
-
-      if (!imageIds.includes(imageId)) {
-        imageIds.push(imageId);
-      }
-    });
-  });
-
   let targetStudyInstanceUID;
   const SeriesInstanceUIDs = [];
 
-  for (let i = 0; i < imageIds.length; i++) {
-    const imageId = imageIds[i];
-    if (!imageId) {
-      continue;
-    }
-    const { SeriesInstanceUID, StudyInstanceUID } = metaData.get('instance', imageId);
+  // Set the series touched as tracked.
+  const imageIds = getImageIds(hydratableMeasurementsInSR, sopInstanceUIDToImageId);
 
+  for (const imageId of imageIds) {
+    const { SeriesInstanceUID, StudyInstanceUID } = metaData.get('instance', imageId);
     if (!SeriesInstanceUIDs.includes(SeriesInstanceUID)) {
       SeriesInstanceUIDs.push(SeriesInstanceUID);
     }
-
     if (!targetStudyInstanceUID) {
       targetStudyInstanceUID = StudyInstanceUID;
     } else if (targetStudyInstanceUID !== StudyInstanceUID) {
@@ -146,12 +136,52 @@ export default function hydrateStructuredReport(
     }
   }
 
+  // For 3d annotations there are no image IDs,
+  // so we need to find the display sets by frame of reference to get the SeriesInstanceUIDs
+  const frameOfReferenceUIDs = getFrameOfReferenceUIDs(
+    hydratableMeasurementsInSR,
+    sopInstanceUIDToImageId
+  );
+  const displaySetsByFrameOfReferenceUID = new Map();
+
+  for (const FrameOfReferenceUID of frameOfReferenceUIDs) {
+    const displaySetsFOR = displaySetService.getDisplaySetsBy(
+      ds => ds.FrameOfReferenceUID === FrameOfReferenceUID && !ds.isDerivedDisplaySet
+    );
+    const ds = getReferencedDisplaySet(
+      displaySet,
+      displaySetsFOR,
+      FrameOfReferenceUID,
+      displaySetService
+    );
+    if (!ds) {
+      continue;
+    }
+    displaySetsByFrameOfReferenceUID.set(FrameOfReferenceUID, ds);
+    if (!SeriesInstanceUIDs.includes(ds.SeriesInstanceUID)) {
+      SeriesInstanceUIDs.push(ds.SeriesInstanceUID);
+    }
+    if (!targetStudyInstanceUID) {
+      targetStudyInstanceUID = ds.StudyInstanceUID;
+    } else if (targetStudyInstanceUID !== ds.StudyInstanceUID) {
+      console.warn('NO SUPPORT FOR SRs THAT HAVE MEASUREMENTS FROM MULTIPLE STUDIES.');
+    }
+  }
+
+  /**
+   * Gets reference data for what frame of reference and the referenced
+   * image id, or for 3d measurements, the volumeId to apply this annotation to.
+   */
   function getReferenceData(toolData): ToolTypes.AnnotationMetadata {
+    // Add the measurement to toolState
+    // dcmjs and Cornerstone3D has structural defect in supporting multi-frame
+    // files, and looking up the imageId from sopInstanceUIDToImageId results
+    // in the wrong value.
     const frameNumber = (toolData.annotation.data && toolData.annotation.data.frameNumber) || 1;
     const imageId = sopInstanceUIDToImageId[`${toolData.sopInstanceUid}:${frameNumber}`];
 
     if (!imageId) {
-      return getReferenceData3D(toolData, servicesManager);
+      return getReferenceData3D(toolData, servicesManager, displaySetsByFrameOfReferenceUID);
     }
 
     const instance = metaData.get('instance', imageId);
@@ -174,23 +204,7 @@ export default function hydrateStructuredReport(
     toolDataForAnnotationType.forEach(toolData => {
       toolData.uid = guid();
       const referenceData = getReferenceData(toolData);
-      const { imageId } = referenceData;
-
-      /** Use SR subtypes for Probe and RectangleROI - they show label (e.g. Lesion) instead of intensity/stats */
-      const toolNameForRendering =
-        annotationType === 'Probe'
-          ? 'SRPoint'
-          : annotationType === 'RectangleROI'
-            ? 'SRRectangleROI'
-            : annotationType;
-
-      /** Use SR subtypes for Probe and RectangleROI - they show label (e.g. Lesion) instead of intensity/stats */
-      const srAnnotationType =
-        annotationType === 'Probe'
-          ? 'SRPoint'
-          : annotationType === 'RectangleROI'
-            ? 'SRRectangleROI'
-            : annotationType;
+      const { referencedImageId } = referenceData;
 
       const annotation = {
         annotationUID: toolData.annotation.annotationUID,
@@ -198,7 +212,7 @@ export default function hydrateStructuredReport(
         predecessorImageId: toolData.predecessorImageId,
         metadata: {
           ...referenceData,
-          toolName: srAnnotationType,
+          toolName: annotationType,
         },
       };
       utilities.updatePlaneRestriction(annotation.data.handles.points, annotation.metadata);
@@ -216,11 +230,11 @@ export default function hydrateStructuredReport(
         }
       });
 
-      const matchingMapping = mappings.find(m => m.annotationType === srAnnotationType);
+      const matchingMapping = mappings.find(m => m.annotationType === annotationType);
 
       const newAnnotationUID = measurementService.addRawMeasurement(
         source,
-        srAnnotationType,
+        annotationType,
         { annotation },
         matchingMapping.toMeasurementSchema,
         dataSource
@@ -231,10 +245,12 @@ export default function hydrateStructuredReport(
         code: annotation.data.finding,
       });
 
-      locking.setAnnotationLocked(newAnnotationUID, true);
+      if (disableEditing) {
+        locking.setAnnotationLocked(newAnnotationUID, true);
+      }
 
-      if (imageId && !imageIds.includes(imageId)) {
-        imageIds.push(imageId);
+      if (referencedImageId && !imageIds.includes(referencedImageId)) {
+        imageIds.push(referencedImageId);
       }
     });
   });
@@ -247,22 +263,120 @@ export default function hydrateStructuredReport(
   };
 }
 
-function chooseDisplaySet(displaySets, annotation) {
+/**
+ * Gets the unique imageIds from hydratable measurements that have an imageId reference
+ * (i.e., 2D/SCOORD annotations).
+ */
+function getImageIds(hydratableMeasurementsInSR, sopInstanceUIDToImageId): string[] {
+  const imageIds: string[] = [];
+  Object.keys(hydratableMeasurementsInSR).forEach(annotationType => {
+    const toolDataForAnnotationType = hydratableMeasurementsInSR[annotationType];
+
+    toolDataForAnnotationType.forEach(toolData => {
+      // Add the measurement to toolState
+      // dcmjs and Cornerstone3D has structural defect in supporting multi-frame
+      // files, and looking up the imageId from sopInstanceUIDToImageId results
+      // in the wrong value.
+      const frameNumber = toolData.annotation.data?.frameNumber || 1;
+      const imageId = sopInstanceUIDToImageId[`${toolData.sopInstanceUid}:${frameNumber}`];
+
+      if (imageId && !imageIds.includes(imageId)) {
+        imageIds.push(imageId);
+      }
+    });
+  });
+  return imageIds;
+}
+
+/**
+ * Gets the unique FrameOfReferenceUIDs from hydratable measurements that have no imageId reference
+ * (i.e., 3D/SCOORD3D annotations). This excludes annotations handled by the getImageIds function.
+ */
+function getFrameOfReferenceUIDs(hydratableMeasurementsInSR, sopInstanceUIDToImageId): string[] {
+  const frameOfReferenceUIDs: string[] = [];
+
+  Object.keys(hydratableMeasurementsInSR).forEach(annotationType => {
+    const toolDataForAnnotationType = hydratableMeasurementsInSR[annotationType];
+    toolDataForAnnotationType.forEach(toolData => {
+      const frameNumber = toolData.annotation.data?.frameNumber || 1;
+      const imageId = sopInstanceUIDToImageId[`${toolData.sopInstanceUid}:${frameNumber}`];
+
+      if (!imageId) {
+        const { FrameOfReferenceUID } = toolData.annotation.metadata;
+        if (FrameOfReferenceUID && !frameOfReferenceUIDs.includes(FrameOfReferenceUID)) {
+          frameOfReferenceUIDs.push(FrameOfReferenceUID);
+        }
+      }
+    });
+  });
+  return frameOfReferenceUIDs;
+}
+
+/**
+ * For 3d annotations, there are often several display sets which could
+ * be used to display the annotation.  Choose the first annotation with the
+ * same frame of reference that is reconstructable, or the first display set
+ * otherwise.
+ */
+function chooseDisplaySet(displaySets, reference) {
   if (!displaySets?.length) {
-    console.warn('No display set found for', annotation);
+    console.warn('No display set found for', reference);
     return;
   }
-  if (displaySets.length === 1) {
-    return displaySets[0];
+  const sortedDisplaySets = OHIF.utils.sortDisplaySetsCopy(displaySets);
+  if (sortedDisplaySets.length === 1) {
+    return sortedDisplaySets[0];
   }
-  const volumeDs = displaySets.find(ds => ds.isReconstructable);
+  const volumeDs = sortedDisplaySets.find(ds => ds.isReconstructable);
   if (volumeDs) {
     return volumeDs;
   }
-  return displaySets[0];
+  return sortedDisplaySets[0];
 }
 
-function getReferenceData3D(toolData, servicesManager: Types.ServicesManager) {
+/**
+ * SCOORD3D only identifies a frame of reference, so many series can be valid
+ * candidates. The SR loader has already selected and recorded a stable display
+ * set for each measurement. Reuse that selection during hydration so the
+ * viewport series and annotation volume cannot depend on display-set load order.
+ */
+function getReferencedDisplaySet(
+  srDisplaySet,
+  displaySets,
+  FrameOfReferenceUID,
+  displaySetService
+) {
+  const referencedDisplaySetInstanceUID = srDisplaySet.measurements?.find(measurement =>
+    measurement.coords?.some(
+      coord =>
+        coord.ValueType === 'SCOORD3D' &&
+        coord.ReferencedFrameOfReferenceSequence === FrameOfReferenceUID
+    )
+  )?.displaySetInstanceUID;
+
+  const referencedDisplaySet = referencedDisplaySetInstanceUID
+    ? displaySetService.getDisplaySetByUID(referencedDisplaySetInstanceUID)
+    : undefined;
+
+  if (
+    referencedDisplaySet?.FrameOfReferenceUID === FrameOfReferenceUID &&
+    !referencedDisplaySet.isDerivedDisplaySet
+  ) {
+    return referencedDisplaySet;
+  }
+
+  return chooseDisplaySet(displaySets, FrameOfReferenceUID);
+}
+
+/**
+ * Gets the additional reference data appropriate for a 3d reference.
+ * This will choose a volume id, frame of reference and a plane restriction.
+ */
+function getReferenceData3D(
+  toolData,
+  servicesManager: Types.ServicesManager,
+  displaySetsByFrameOfReferenceUID = new Map()
+) {
   const { FrameOfReferenceUID } = toolData.annotation.metadata;
   const { points } = toolData.annotation.data.handles;
   const { displaySetService } = servicesManager.services;
@@ -274,7 +388,9 @@ function getReferenceData3D(toolData, servicesManager: Types.ServicesManager) {
       FrameOfReferenceUID,
     };
   }
-  const ds = chooseDisplaySet(displaySetsFOR, toolData.annotation);
+  const ds =
+    displaySetsByFrameOfReferenceUID.get(FrameOfReferenceUID) ||
+    chooseDisplaySet(displaySetsFOR, toolData.annotation);
   const cameraView = chooseCameraView(ds, points);
 
   const viewReference = {
@@ -286,6 +402,10 @@ function getReferenceData3D(toolData, servicesManager: Types.ServicesManager) {
   return viewReference;
 }
 
+/**
+ * Chooses a possible camera view - right now this is fairly basic,
+ * just setting the unknowns to null.
+ */
 function chooseCameraView(_ds, points) {
   const selectedPoints = choosePoints(points);
   const cameraFocalPoint = <Point3>centerOf(selectedPoints);

@@ -7,7 +7,7 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   maxFailures: process.env.CI ? 10 : undefined,
-  workers: process.env.CI ? 6 : undefined,
+  workers: process.env.CI ? 18 : undefined,
   snapshotPathTemplate: './tests/screenshots{/projectName}/{testFilePath}/{arg}{ext}',
   outputDir: './tests/test-results',
   reporter: [['html', { outputFolder: './tests/playwright-report' }]],
@@ -22,8 +22,7 @@ export default defineConfig({
     launchOptions: {
       // do not hide the scrollbars so that we can assert their look-and-feel
       ignoreDefaultArgs: ['--hide-scrollbars'],
-      // Do not force OHIF nashua's `--use-gl=egl` here: ImagingDataCommons/ViewersV3
-      // runs Playwright on GitHub-hosted ubuntu runners (no nashua GPU/EGL stack).
+      args: ['--use-gl=egl'],
     },
   },
 
@@ -47,7 +46,7 @@ export default defineConfig({
   ],
   webServer: {
     command:
-      'cross-env APP_CONFIG=config/e2e.js COVERAGE=true OHIF_PORT=3335 OHIF_OPEN=false nyc yarn start',
+      'cross-env APP_CONFIG=config/e2e.js COVERAGE=true OHIF_PORT=3335 OHIF_OPEN=false nyc pnpm --filter @ohif/app exec rspack serve --config .webpack/webpack.pwa.js',
     url: 'http://localhost:3335',
     reuseExistingServer: !process.env.CI,
     timeout: 360_000,
