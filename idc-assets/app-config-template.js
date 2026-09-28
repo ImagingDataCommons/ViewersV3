@@ -47,13 +47,15 @@ window.config = {
   },
   extensions: [],
   modes: [],
-  customizationService: [
-    {
-      'studyBrowser.studyMode': { $set: 'primary' },
-      'panelSegmentation.disableEditing': { $set: true },
-      'panelMeasurement.disableEditing': { $set: true },
-    }
-  ],
+  customizationService: {
+    global: [
+      {
+        'studyBrowser.studyMode': { $set: 'primary' },
+        'panelSegmentation.disableEditing': { $set: true },
+        'panelMeasurement.disableEditing': { $set: true },
+      },
+    ],
+  },
   showStudyList: false,
   disableConfirmationPrompts: true,
   // some windows systems have issues with more than 3 web workers
