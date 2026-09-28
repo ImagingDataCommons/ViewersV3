@@ -28,6 +28,7 @@ auditConfig:
     - GHSA-mp2f-45pm-3cg9 # decompress is called only ever decompresses a hash-pinned, hardcoded archive in a dev-only CLI
 
 allowBuilds:
+  '@kitware/vtk.js': false
   '@scarf/scarf': true
   '@swc/core': true
   core-js: true
@@ -35,6 +36,7 @@ allowBuilds:
   cypress: true
   protobufjs: true
   sharp: true
+  swiper: false
 overrides:
   # Synced from origin/master's package.json `resolutions` block during the
   # merge. Keep this list aligned with master so security/version pins from
