@@ -282,6 +282,7 @@ function createDicomWebApi(dicomWebConfig: DicomWebConfig, servicesManager) {
             mapParams(origParams, {
               supportsFuzzyMatching: dicomWebConfig.supportsFuzzyMatching,
               supportsWildcard: dicomWebConfig.supportsWildcard,
+              qidoSupportsIncludeField: dicomWebConfig.qidoSupportsIncludeField,
             }) || {};
 
           const results = await qidoSearch(qidoDicomWebClient, undefined, undefined, mappedParams);

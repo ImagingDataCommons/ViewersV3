@@ -28,10 +28,10 @@
     "start": "pnpm run dev"
   },
   "peerDependencies": {
-    "@ohif/core": "3.13.10",
-    "@ohif/extension-default": "3.13.10",
-    "@ohif/extension-cornerstone": "3.13.10",
-    "@ohif/i18n": "3.13.10",
+    "@ohif/core": "3.13.12",
+    "@ohif/extension-default": "3.13.12",
+    "@ohif/extension-cornerstone": "3.13.12",
+    "@ohif/i18n": "3.13.12",
     "prop-types": "^15.6.2",
     "react-router": "^6.30.3",
     "react-router-dom": "^6.30.3",

@@ -1,62 +1,100 @@
 /** @type {AppTypes.Config} */
 
-// Secure, minimal default configuration.
-//
-// This is what a plain production build with no APP_CONFIG produces, so it is
-// deliberately locked down:
-//   - The local file data source (`dicomlocal`) and the runtime `?url=` sources
-//     (`dicomjson`, `dicomwebproxy`) are NOT enabled — they widen the attack
-//     surface of a default deployment.
-//   - `?customization=` URL loading is OFF: no `customizationUrlPrefixes` are
-//     configured, so any `?customization=` value is rejected (and aborts boot
-//     rather than silently loading).
-//   - `dangerouslyUseDynamicConfig` (the `configUrl` query parameter) is off.
-//
-// It does not need to "just work" untouched — point the data source below at
-// your own DICOMweb server. For a fully-featured setup with every data source
-// and customization loading enabled, see config/dev.js (local development) and
-// config/netlify.js (the public demo deploy).
+/**
+ * IDC Viewer default configuration for local development.
+ * Based on OHIF 3.13 config structure with IDC-specific customizations.
+ */
 window.config = {
   name: 'config/default.js',
   routerBasename: null,
-  // whiteLabeling: {},
   extensions: [],
   modes: [],
-  customizationService: {},
 
-  // --- URL-driven customizations (?customization=) ----------------------------
-  // OFF by default. To allow loading customization data files from the URL, set
-  // `customizationUrlPrefixes` to a map of allowed prefixes. The `default` prefix
-  // (no slashes) is used for values with no leading slash; every other prefix
-  // must start AND end with a slash and is matched against the leading
-  // `/segment/` of the value. Files are fetched and parsed as JSONC data — they
-  // are never executed. Example (left disabled here on purpose):
-  //
-  // customizationUrlPrefixes: {
-  //   default: './customizations/',                       // ?customization=tools/ctPresets
-  //   '/remote/': 'https://cdn.example.com/ohif-custom/', // ?customization=/remote/siteA
-  // },
-  // ----------------------------------------------------------------------------
-
-  // --- Native ("next") Generic Viewport --------------------------------------
-  // OFF by default. Set `enabled: true` (or pass ?useNextViewports=true in the
-  // URL) to drive viewports through cornerstone's native GenericViewport
-  // ("next") API instead of the legacy Stack/Volume viewport classes.
-  genericViewports: {
-    enabled: false,
-    // Render backend selection: 'cpu' | 'webgl' | 'auto' | a backend id
-    // registered via cornerstone's registerRenderBackend (e.g. a webgpu
-    // backend), or a map with per-viewport-type overrides, e.g.
-    // { default: 'webgl', orthographic: 'cpu' }. The matching URL params take
-    // precedence per-session: ?viewportRendering=cpu and
-    // ?orthographic.viewportRendering=cpu.
-    // viewportRendering: 'auto',
+  /**
+   * Customization service using the new phased format (OHIF 3.13+).
+   * The `global` array is applied after extensions register.
+   */
+  customizationService: {
+    global: [
+      {
+        'studyBrowser.studyMode': { $set: 'primary' },
+        'panelSegmentation.disableEditing': { $set: true },
+        'panelMeasurement.disableEditing': { $set: true },
+      },
+    ],
   },
-  // ----------------------------------------------------------------------------
+
+  /**
+   * Disable the investigational use dialog for IDC.
+   */
+  investigationalUseDialog: {
+    option: 'never',
+  },
+
+  /**
+   * IDC branding / white labeling.
+   */
+  whiteLabeling: {
+    createLogoComponentFn: function (React) {
+      return React.createElement(
+        'a',
+        {
+          target: '_self',
+          rel: 'noopener noreferrer',
+          className: 'text-purple-600 line-through',
+          href: '/',
+        },
+        React.createElement('img', {
+          src: '/assets/idc.svg',
+          className: 'w-15 h-14 p-1',
+        })
+      );
+    },
+  },
+
+  /**
+   * IDC instance annotations configuration (used by @ohif/extension-idc).
+   */
+  instanceAnnotations: {
+    enabled: true,
+    maxLabels: 10,
+    showColor: true,
+  },
+
+  /**
+   * IDC download commands dialog configuration (used by @ohif/extension-idc).
+   */
+  idcDownloadCommandsDialog: {
+    description: 'Follow the instructions below to download the study or series:',
+    instructions: [
+      {
+        command: 'pip install idc-index --upgrade',
+        label: 'First, install the idc-index python package:',
+      },
+      {
+        command: 'idc download {{StudyInstanceUID}}',
+        label: 'Then, to download the whole study, run:',
+      },
+      {
+        command: 'idc download {{SeriesInstanceUID}}',
+        label: "Or, to download just the active viewport's series, run:",
+      },
+    ],
+  },
+
+  /**
+   * Mode visibility configuration.
+   * Hide segmentation mode (use GCP mode instead for IDC).
+   */
+  modesConfiguration: {
+    '@ohif/mode-segmentation': {
+      hide: { $set: true },
+    },
+  },
+
   showStudyList: true,
-  // some windows systems have issues with more than 3 web workers
+  disableConfirmationPrompts: true,
   maxNumberOfWebWorkers: 3,
-  // below flag is for performance reasons, but it might not work for all servers
   showWarningMessageForCrossOrigin: true,
   showCPUFallbackMessage: true,
   showLoadingIndicator: true,
@@ -64,21 +102,47 @@ window.config = {
   strictZSpacingForVolumeViewport: true,
   groupEnabledModesFirst: true,
   allowMultiSelectExport: false,
+
   maxNumRequests: {
     interaction: 100,
-    thumbnail: 5,
-    // Prefetch number is dependent on the http protocol. For http 2 or
-    // above, the number of requests can be go a lot higher.
+    thumbnail: 75,
     prefetch: 25,
   },
-  showErrorDetails: 'always', // 'always', 'dev', 'production'
-  // `dangerouslyUseDynamicConfig` (load configuration from a `configUrl` query
-  // parameter) is intentionally left OFF in the secure default build. See
-  // config/dev.js for the documented shape.
-  defaultDataSourceName: 'ohif',
+
+  showErrorDetails: 'always',
+
+  defaultDataSourceName: 'idc-dicomweb',
+
   dataSources: [
     {
-      // Read-only public demo server. Replace with your own DICOMweb server.
+      friendlyName: 'IDC DICOMWeb Server',
+      namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
+      sourceName: 'idc-dicomweb',
+      configuration: {
+        name: 'idc-dicomweb',
+        wadoUriRoot:
+          'https://testing-proxy.canceridc.dev/current/viewer-only-no-downloads-see-tinyurl-dot-com-slash-3j3d9jyp/dicomWeb',
+        qidoRoot:
+          'https://testing-proxy.canceridc.dev/current/viewer-only-no-downloads-see-tinyurl-dot-com-slash-3j3d9jyp/dicomWeb',
+        wadoRoot:
+          'https://testing-proxy.canceridc.dev/current/viewer-only-no-downloads-see-tinyurl-dot-com-slash-3j3d9jyp/dicomWeb',
+        qidoSupportsIncludeField: false,
+        supportsReject: false,
+        imageRendering: 'wadors',
+        thumbnailRendering: 'wadors',
+        enableStudyLazyLoad: true,
+        supportsFuzzyMatching: false,
+        supportsWildcard: false,
+        staticWado: true,
+        singlepart: 'bulkdata,video',
+        bulkDataURI: {
+          enabled: false,
+          relativeResolution: 'studies',
+        },
+        omitQuotationForMultipartRequest: true,
+      },
+    },
+    {
       namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
       sourceName: 'ohif',
       configuration: {
@@ -88,41 +152,129 @@ window.config = {
         qidoRoot: 'https://d14fa38qiwhyfd.cloudfront.net/dicomweb',
         wadoRoot: 'https://d14fa38qiwhyfd.cloudfront.net/dicomweb',
         qidoSupportsIncludeField: false,
+        supportsReject: false,
         imageRendering: 'wadors',
-        thumbnailRendering: 'thumbnail',
-        thumbnailRequestStrategy: 'fetch',
+        thumbnailRendering: 'wadors',
         enableStudyLazyLoad: true,
         supportsFuzzyMatching: false,
         supportsWildcard: true,
         staticWado: true,
-        // Multiframe SEG loads fetch the whole instance as a single Part 10
-        // object by default and wait for it: the per-frame endpoint is
-        // efficient, but SEG frames are so small and numerous that one bulk
-        // fetch beats hundreds of tiny requests. Per-frame loading is the
-        // exception — set loadMultiframeAsPart10: false here to force it.
         singlepart: 'bulkdata,video',
         bulkDataURI: {
           enabled: true,
           relativeResolution: 'studies',
-          transform: url => url.replace('/pixeldata.mp4', '/rendered'),
         },
         omitQuotationForMultipartRequest: true,
       },
     },
-
-    // The following data sources are intentionally NOT enabled in the secure
-    // default because they broaden the attack surface of a default deployment.
-    // Enable them only in a deployment you control (see config/dev.js):
-    //   - dicomlocal:    loads DICOM files from the user's machine.
-    //   - dicomjson:     loads metadata from an arbitrary `?url=` (gate with
-    //                    `dangerouslyAllowedOriginsForAuthenticatedEnvironments`).
-    //   - dicomwebproxy: delegating proxy driven by `?url=`.
   ],
-  httpErrorHandler: error => {
-    // This is 429 when rejected from the public idc sandbox too often.
-    console.warn(error.status);
 
-    // Could use services manager here to bring up a dialog/modal if needed.
+  httpErrorHandler: error => {
+    console.warn(error.status);
     console.warn('test, navigate to https://ohif.org/');
   },
+
+  /**
+   * IDC hotkeys configuration.
+   */
+  hotkeys: [
+    {
+      commandName: 'incrementActiveViewport',
+      label: 'Next Viewport',
+      keys: ['right'],
+    },
+    {
+      commandName: 'decrementActiveViewport',
+      label: 'Previous Viewport',
+      keys: ['left'],
+    },
+    { commandName: 'rotateViewportCW', label: 'Rotate Right', keys: ['r'] },
+    { commandName: 'rotateViewportCCW', label: 'Rotate Left', keys: ['l'] },
+    { commandName: 'invertViewport', label: 'Invert', keys: ['i'] },
+    {
+      commandName: 'flipViewportHorizontal',
+      label: 'Flip Horizontally',
+      keys: ['h'],
+    },
+    {
+      commandName: 'flipViewportVertical',
+      label: 'Flip Vertically',
+      keys: ['v'],
+    },
+    { commandName: 'scaleUpViewport', label: 'Zoom In', keys: ['+'] },
+    { commandName: 'scaleDownViewport', label: 'Zoom Out', keys: ['-'] },
+    { commandName: 'fitViewportToWindow', label: 'Zoom to Fit', keys: ['='] },
+    { commandName: 'resetViewport', label: 'Reset', keys: ['space'] },
+    { commandName: 'nextImage', label: 'Next Image', keys: ['down'] },
+    { commandName: 'previousImage', label: 'Previous Image', keys: ['up'] },
+    {
+      commandName: 'setToolActive',
+      commandOptions: { toolName: 'Zoom' },
+      label: 'Zoom',
+      keys: ['z'],
+    },
+    {
+      commandName: 'windowLevelPreset1',
+      label: 'W/L Preset 1',
+      keys: ['1'],
+    },
+    {
+      commandName: 'windowLevelPreset2',
+      label: 'W/L Preset 2',
+      keys: ['2'],
+    },
+    {
+      commandName: 'windowLevelPreset3',
+      label: 'W/L Preset 3',
+      keys: ['3'],
+    },
+    {
+      commandName: 'windowLevelPreset4',
+      label: 'W/L Preset 4',
+      keys: ['4'],
+    },
+    {
+      commandName: 'windowLevelPreset5',
+      label: 'W/L Preset 5',
+      keys: ['5'],
+    },
+    {
+      commandName: 'windowLevelPreset6',
+      label: 'W/L Preset 6',
+      keys: ['6'],
+    },
+    {
+      commandName: 'windowLevelPreset7',
+      label: 'W/L Preset 7',
+      keys: ['7'],
+    },
+    {
+      commandName: 'windowLevelPreset8',
+      label: 'W/L Preset 8',
+      keys: ['8'],
+    },
+    {
+      commandName: 'windowLevelPreset9',
+      label: 'W/L Preset 9',
+      keys: ['9'],
+    },
+  ],
+
+  /**
+   * Google OAuth configuration for IDC.
+   */
+  oidc: [
+    {
+      authority: 'https://accounts.google.com',
+      client_id: '370953977065-o32uf5cn5f4bovtogdu862mlnhbcv9hk.apps.googleusercontent.com',
+      redirect_uri: '/callback',
+      response_type: 'id_token token',
+      scope:
+        'email profile openid https://www.googleapis.com/auth/cloudplatformprojects.readonly https://www.googleapis.com/auth/cloud-healthcare',
+      post_logout_redirect_uri: '/logout-redirect.html',
+      revoke_uri: 'https://accounts.google.com/o/oauth2/revoke?token=',
+      automaticSilentRenew: true,
+      revokeAccessTokenOnSignout: true,
+    },
+  ],
 };

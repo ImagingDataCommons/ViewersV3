@@ -7,8 +7,9 @@ packages:
 # The upstream @cornerstonejs/adapters indexes segments by array position,
 # but LABELMAP segmentations require indexing by SegmentNumber (may start at 0
 # or have gaps). See DICOM Part 3, Section C.8.20.2.4.
-patchedDependencies:
-  '@cornerstonejs/adapters@5.6.8': patches/@cornerstonejs+adapters+5.6.8.patch
+# NOTE: Patch disabled - applied manually after install due to line number changes in 3.13.
+# patchedDependencies:
+#   '@cornerstonejs/adapters@5.6.8': patches/@cornerstonejs+adapters+5.6.8.patch
 
 # Mirror the cornerstone3D pnpm setup (libs/@cornerstonejs) which is known-good.
 nodeLinker: hoisted

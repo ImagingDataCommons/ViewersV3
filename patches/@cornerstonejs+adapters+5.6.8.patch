@@ -2,7 +2,7 @@ diff --git a/node_modules/@cornerstonejs/adapters/dist/esm/adapters/Cornerstone/
 index a3b8414..19ca9bd 100644
 --- a/node_modules/@cornerstonejs/adapters/dist/esm/adapters/Cornerstone/Segmentation_4X.js
 +++ b/node_modules/@cornerstonejs/adapters/dist/esm/adapters/Cornerstone/Segmentation_4X.js
-@@ -1055,12 +1055,19 @@ function alignPixelDataWithSourceData(pixelData2D, iop, orientations, tolerance)
+@@ -1168,12 +1168,19 @@ function alignPixelDataWithSourceData(pixelData2D, iop, orientations, tolerance)
  }
  function getSegmentMetadata(multiframe, seriesInstanceUid) {
    const segmentSequence = multiframe.SegmentSequence;

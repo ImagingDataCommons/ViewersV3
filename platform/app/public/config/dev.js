@@ -1,36 +1,108 @@
 /** @type {AppTypes.Config} */
 
-// Local development configuration.
-//
-// This is the default config for the dev server (`pnpm run dev`, `dev:fast`,
-// `start`). It is intentionally kept at parity with config/netlify.js (the
-// public demo deploy): every data source is enabled, the `?customization=` URL
-// feature is ON via `customizationUrlPrefixes`, and the same startup
-// `customizationService` modules are loaded — so the whole app, including
-// customizations, can be exercised locally exactly as it runs on the demo.
-// The locked-down config/default.js is what a plain production build emits
-// instead.
+/**
+ * IDC Local development configuration.
+ *
+ * This is the default config for the dev server (`pnpm run dev`, `dev:fast`,
+ * `start`). Includes IDC-specific settings: OIDC, branding, data sources.
+ */
 window.config = {
   name: 'config/dev.js',
   routerBasename: null,
-  // whiteLabeling: {},
   extensions: [],
   modes: [],
-  customizationService: ['@ohif/extension-default.customizationModule.theme'],
 
-  // URL-driven customizations (?customization=). The `default` prefix (no
-  // slashes) is used for values without a leading slash; every other prefix
-  // must start AND end with a slash and matches the leading `/segment/` of the
-  // value. Files are fetched and parsed as JSONC data — never executed.
-  // e.g. ?customization=tools/ctPresets  ->  ./customizations/tools/ctPresets.jsonc
+  /**
+   * Customization service using the new phased format (OHIF 3.13+).
+   */
+  customizationService: {
+    global: [
+      '@ohif/extension-default.customizationModule.theme',
+      {
+        'studyBrowser.studyMode': { $set: 'primary' },
+        'panelSegmentation.disableEditing': { $set: true },
+        'panelMeasurement.disableEditing': { $set: true },
+      },
+    ],
+  },
+
+  /**
+   * URL-driven customizations (?customization=).
+   */
   customizationUrlPrefixes: {
     default: './customizations/',
   },
 
+  /**
+   * Disable the investigational use dialog for IDC.
+   */
+  investigationalUseDialog: {
+    option: 'never',
+  },
+
+  /**
+   * IDC branding / white labeling.
+   */
+  whiteLabeling: {
+    createLogoComponentFn: function (React) {
+      return React.createElement(
+        'a',
+        {
+          target: '_self',
+          rel: 'noopener noreferrer',
+          className: 'text-purple-600 line-through',
+          href: '/',
+        },
+        React.createElement('img', {
+          src: '/assets/idc.svg',
+          className: 'w-15 h-14 p-1',
+        })
+      );
+    },
+  },
+
+  /**
+   * IDC instance annotations configuration (used by @ohif/extension-idc).
+   */
+  instanceAnnotations: {
+    enabled: true,
+    maxLabels: 10,
+    showColor: true,
+  },
+
+  /**
+   * IDC download commands dialog configuration (used by @ohif/extension-idc).
+   */
+  idcDownloadCommandsDialog: {
+    description: 'Follow the instructions below to download the study or series:',
+    instructions: [
+      {
+        command: 'pip install idc-index --upgrade',
+        label: 'First, install the idc-index python package:',
+      },
+      {
+        command: 'idc download {{StudyInstanceUID}}',
+        label: 'Then, to download the whole study, run:',
+      },
+      {
+        command: 'idc download {{SeriesInstanceUID}}',
+        label: "Or, to download just the active viewport's series, run:",
+      },
+    ],
+  },
+
+  /**
+   * Mode visibility configuration.
+   */
+  modesConfiguration: {
+    '@ohif/mode-segmentation': {
+      hide: { $set: true },
+    },
+  },
+
   showStudyList: true,
-  // some windows systems have issues with more than 3 web workers
+  disableConfirmationPrompts: true,
   maxNumberOfWebWorkers: 3,
-  // below flag is for performance reasons, but it might not work for all servers
   showWarningMessageForCrossOrigin: true,
   showCPUFallbackMessage: true,
   showLoadingIndicator: true,
@@ -38,16 +110,15 @@ window.config = {
   strictZSpacingForVolumeViewport: true,
   groupEnabledModesFirst: true,
   allowMultiSelectExport: false,
+
   maxNumRequests: {
     interaction: 100,
-    thumbnail: 5,
-    // Prefetch number is dependent on the http protocol. For http 2 or
-    // above, the number of requests can be go a lot higher.
+    thumbnail: 75,
     prefetch: 25,
   },
-  showErrorDetails: 'always', // 'always', 'dev', 'production'
-  // filterQueryParam: false,
-  // Defines multi-monitor layouts
+
+  showErrorDetails: 'always',
+
   multimonitor: [
     {
       id: 'split',
@@ -78,7 +149,6 @@ window.config = {
         },
       ],
     },
-
     {
       id: '2',
       test: ({ multimonitor }) => multimonitor === '2',
@@ -108,13 +178,38 @@ window.config = {
       ],
     },
   ],
-  defaultDataSourceName: 'ohif',
-  /* Dynamic config allows user to pass "configUrl" query string this allows to load config without recompiling application. The regex will ensure valid configuration source */
-  // dangerouslyUseDynamicConfig: {
-  //   enabled: true,
-  //   regex: /.*/,
-  // },
+
+  defaultDataSourceName: 'idc-dicomweb',
+
   dataSources: [
+    {
+      friendlyName: 'IDC DICOMWeb Server',
+      namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
+      sourceName: 'idc-dicomweb',
+      configuration: {
+        name: 'idc-dicomweb',
+        wadoUriRoot:
+          'https://testing-proxy.canceridc.dev/current/viewer-only-no-downloads-see-tinyurl-dot-com-slash-3j3d9jyp/dicomWeb',
+        qidoRoot:
+          'https://testing-proxy.canceridc.dev/current/viewer-only-no-downloads-see-tinyurl-dot-com-slash-3j3d9jyp/dicomWeb',
+        wadoRoot:
+          'https://testing-proxy.canceridc.dev/current/viewer-only-no-downloads-see-tinyurl-dot-com-slash-3j3d9jyp/dicomWeb',
+        qidoSupportsIncludeField: true,
+        supportsReject: false,
+        imageRendering: 'wadors',
+        thumbnailRendering: 'wadors',
+        enableStudyLazyLoad: true,
+        supportsFuzzyMatching: true,
+        supportsWildcard: false,
+        staticWado: false,
+        singlepart: 'bulkdata,video',
+        bulkDataURI: {
+          enabled: false,
+          relativeResolution: 'studies',
+        },
+        omitQuotationForMultipartRequest: true,
+      },
+    },
     {
       namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
       sourceName: 'ohif',
@@ -141,58 +236,6 @@ window.config = {
         omitQuotationForMultipartRequest: true,
       },
     },
-
-    {
-      namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
-      sourceName: 'ohif2',
-      configuration: {
-        friendlyName: 'AWS S3 Static wado secondary server',
-        name: 'aws',
-        wadoUriRoot: 'https://dd14fa38qiwhyfd.cloudfront.net/dicomweb',
-        qidoRoot: 'https://dd14fa38qiwhyfd.cloudfront.net/dicomweb',
-        wadoRoot: 'https://dd14fa38qiwhyfd.cloudfront.net/dicomweb',
-        qidoSupportsIncludeField: false,
-        supportsReject: false,
-        imageRendering: 'wadors',
-        thumbnailRendering: 'wadors',
-        enableStudyLazyLoad: true,
-        supportsFuzzyMatching: false,
-        supportsWildcard: true,
-        staticWado: true,
-        singlepart: 'bulkdata,video',
-        bulkDataURI: {
-          enabled: true,
-          relativeResolution: 'studies',
-        },
-        omitQuotationForMultipartRequest: true,
-      },
-    },
-    {
-      namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
-      sourceName: 'ohif3',
-      configuration: {
-        friendlyName: 'AWS S3 Static wado secondary server',
-        name: 'aws',
-        wadoUriRoot: 'https://d3t6nz73ql33tx.cloudfront.net/dicomweb',
-        qidoRoot: 'https://d3t6nz73ql33tx.cloudfront.net/dicomweb',
-        wadoRoot: 'https://d3t6nz73ql33tx.cloudfront.net/dicomweb',
-        qidoSupportsIncludeField: false,
-        supportsReject: false,
-        imageRendering: 'wadors',
-        thumbnailRendering: 'wadors',
-        enableStudyLazyLoad: true,
-        supportsFuzzyMatching: false,
-        supportsWildcard: true,
-        staticWado: true,
-        singlepart: 'bulkdata,video',
-        bulkDataURI: {
-          enabled: true,
-          relativeResolution: 'studies',
-        },
-        omitQuotationForMultipartRequest: true,
-      },
-    },
-
     {
       namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
       sourceName: 'local5000',
@@ -240,7 +283,6 @@ window.config = {
         },
       },
     },
-
     {
       namespace: '@ohif/extension-default.dataSourcesModule.dicomwebproxy',
       sourceName: 'dicomwebproxy',
@@ -265,11 +307,113 @@ window.config = {
       },
     },
   ],
-  httpErrorHandler: error => {
-    // This is 429 when rejected from the public idc sandbox too often.
-    console.warn(error.status);
 
-    // Could use services manager here to bring up a dialog/modal if needed.
+  httpErrorHandler: error => {
+    console.warn(error.status);
     console.warn('test, navigate to https://ohif.org/');
   },
+
+  /**
+   * IDC hotkeys configuration.
+   */
+  hotkeys: [
+    {
+      commandName: 'incrementActiveViewport',
+      label: 'Next Viewport',
+      keys: ['right'],
+    },
+    {
+      commandName: 'decrementActiveViewport',
+      label: 'Previous Viewport',
+      keys: ['left'],
+    },
+    { commandName: 'rotateViewportCW', label: 'Rotate Right', keys: ['r'] },
+    { commandName: 'rotateViewportCCW', label: 'Rotate Left', keys: ['l'] },
+    { commandName: 'invertViewport', label: 'Invert', keys: ['i'] },
+    {
+      commandName: 'flipViewportHorizontal',
+      label: 'Flip Horizontally',
+      keys: ['h'],
+    },
+    {
+      commandName: 'flipViewportVertical',
+      label: 'Flip Vertically',
+      keys: ['v'],
+    },
+    { commandName: 'scaleUpViewport', label: 'Zoom In', keys: ['+'] },
+    { commandName: 'scaleDownViewport', label: 'Zoom Out', keys: ['-'] },
+    { commandName: 'fitViewportToWindow', label: 'Zoom to Fit', keys: ['='] },
+    { commandName: 'resetViewport', label: 'Reset', keys: ['space'] },
+    { commandName: 'nextImage', label: 'Next Image', keys: ['down'] },
+    { commandName: 'previousImage', label: 'Previous Image', keys: ['up'] },
+    {
+      commandName: 'setToolActive',
+      commandOptions: { toolName: 'Zoom' },
+      label: 'Zoom',
+      keys: ['z'],
+    },
+    {
+      commandName: 'windowLevelPreset1',
+      label: 'W/L Preset 1',
+      keys: ['1'],
+    },
+    {
+      commandName: 'windowLevelPreset2',
+      label: 'W/L Preset 2',
+      keys: ['2'],
+    },
+    {
+      commandName: 'windowLevelPreset3',
+      label: 'W/L Preset 3',
+      keys: ['3'],
+    },
+    {
+      commandName: 'windowLevelPreset4',
+      label: 'W/L Preset 4',
+      keys: ['4'],
+    },
+    {
+      commandName: 'windowLevelPreset5',
+      label: 'W/L Preset 5',
+      keys: ['5'],
+    },
+    {
+      commandName: 'windowLevelPreset6',
+      label: 'W/L Preset 6',
+      keys: ['6'],
+    },
+    {
+      commandName: 'windowLevelPreset7',
+      label: 'W/L Preset 7',
+      keys: ['7'],
+    },
+    {
+      commandName: 'windowLevelPreset8',
+      label: 'W/L Preset 8',
+      keys: ['8'],
+    },
+    {
+      commandName: 'windowLevelPreset9',
+      label: 'W/L Preset 9',
+      keys: ['9'],
+    },
+  ],
+
+  /**
+   * Google OAuth configuration for IDC.
+   */
+  oidc: [
+    {
+      authority: 'https://accounts.google.com',
+      client_id: '370953977065-o32uf5cn5f4bovtogdu862mlnhbcv9hk.apps.googleusercontent.com',
+      redirect_uri: '/callback',
+      response_type: 'id_token token',
+      scope:
+        'email profile openid https://www.googleapis.com/auth/cloudplatformprojects.readonly https://www.googleapis.com/auth/cloud-healthcare',
+      post_logout_redirect_uri: '/logout-redirect.html',
+      revoke_uri: 'https://accounts.google.com/o/oauth2/revoke?token=',
+      automaticSilentRenew: true,
+      revokeAccessTokenOnSignout: true,
+    },
+  ],
 };
