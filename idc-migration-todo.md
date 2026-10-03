@@ -13,6 +13,7 @@ This document tracks the migration status from IDC's OHIF v3.12.14 fork to v3.13
 | Deploy Scripts | ✅ Updated |
 | Adapters Patch | ✅ Renamed |
 | Config Format | ✅ Migrated |
+| GCP Extension | ✅ Datasource fixed (PR #6) |
 
 ---
 
@@ -163,10 +164,26 @@ These are improvements, not regressions.
 
 ---
 
+## GCP Extension Datasource Fix (Completed)
+
+The `ohif-gcp-extension` datasource configuration was using deprecated properties incompatible with OHIF 3.13.
+
+**Fixed in PR #6 commit `8f79c25`:**
+
+| Property | Before (Broken) | After (Fixed) |
+|----------|-----------------|---------------|
+| `useBulkDataURI` | `false` (deprecated) | Removed |
+| `bulkDataURI` | `undefined` | `{ enabled: false }` |
+| `qidoSupportsIncludeField` | `false` | `true` |
+| `supportsFuzzyMatching` | `false` | `true` |
+| `omitQuotationForMultipartRequest` | (missing) | `true` |
+
+---
+
 ## Dependencies
 
 This PR requires these companion PRs merged first:
-- [ ] https://github.com/ImagingDataCommons/ohif-gcp-extension/pull/6
+- [ ] https://github.com/ImagingDataCommons/ohif-gcp-extension/pull/6 ✅ Datasource fix added
 - [ ] https://github.com/ImagingDataCommons/ohif-gcp-mode/pull/16
 
 After merging, update `platform/app/package.json` references back to `#main`.
