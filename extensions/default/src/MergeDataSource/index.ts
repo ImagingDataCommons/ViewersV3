@@ -25,6 +25,35 @@ export const mergeMap: MergeMap = {
       return series;
     },
   },
+  /**
+   * Tag instances from retrieve.series.metadata with RetrieveAETitle.
+   * This ensures getImageIdsForDisplaySet knows which data source to use
+   * when loading images, even if query.series.search was not called first.
+   */
+  'retrieve.series.metadata': {
+    tagFunc: (instances, sourceName) => {
+      if (Array.isArray(instances)) {
+        const taggedSeriesUIDs = new Set<string>();
+
+        instances.forEach(instance => {
+          instance.RetrieveAETitle = sourceName;
+
+          /** Also update series metadata if not already tagged */
+          const seriesUID = instance.SeriesInstanceUID;
+          const studyUID = instance.StudyInstanceUID;
+          if (seriesUID && studyUID && !taggedSeriesUIDs.has(seriesUID)) {
+            taggedSeriesUIDs.add(seriesUID);
+            const seriesMeta = DicomMetadataStore.getSeries(studyUID, seriesUID);
+            if (seriesMeta && !seriesMeta.RetrieveAETitle) {
+              seriesMeta.RetrieveAETitle = sourceName;
+              DicomMetadataStore.updateSeriesMetadata(seriesMeta);
+            }
+          }
+        });
+      }
+      return instances;
+    },
+  },
 };
 
 /**
@@ -69,8 +98,20 @@ export const callForAllDataSourcesAsync = async ({
     }
   }
 
-  const data = await Promise.allSettled(promises);
-  const mergedData = data.map((data, i) => tagFunc(data.value, sourceNames[i]));
+  const settledResults = await Promise.allSettled(promises);
+
+  const mergedData = [];
+  for (let i = 0; i < settledResults.length; i++) {
+    const result = settledResults[i];
+    const sourceName = sourceNames[i];
+
+    if (result.status === 'fulfilled') {
+      const taggedData = tagFunc(result.value, sourceName);
+      mergedData.push(taggedData);
+    } else {
+      console.warn(`[MergeDataSource] ${path} from '${sourceName}' failed:`, result.reason);
+    }
+  }
 
   let results = [];
   if (mergeKey) {
@@ -161,7 +202,7 @@ export const callByRetrieveAETitle = ({
     displaySet.SeriesInstanceUID
   );
   const [dataSource] = extensionManager.getDataSources(
-    seriesMetadata.RetrieveAETitle || defaultDataSourceName
+    seriesMetadata?.RetrieveAETitle || defaultDataSourceName
   );
   return dataSource[path](...args);
 };
