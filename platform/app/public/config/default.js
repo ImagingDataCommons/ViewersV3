@@ -33,6 +33,7 @@ window.config = {
 
   /**
    * IDC branding / white labeling.
+   * Logo dimensions follow OHIF standard (h-[28px] with auto width for 4:1 aspect ratio).
    */
   whiteLabeling: {
     createLogoComponentFn: function (React) {
@@ -41,12 +42,13 @@ window.config = {
         {
           target: '_self',
           rel: 'noopener noreferrer',
-          className: 'text-purple-600 line-through',
+          className: 'flex items-center',
           href: '/',
         },
         React.createElement('img', {
           src: '/assets/idc.svg',
-          className: 'w-15 h-14 p-1',
+          alt: 'IDC Logo',
+          className: 'h-[48px] w-auto',
         })
       );
     },

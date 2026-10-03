@@ -2,12 +2,16 @@ window.config = {
   routerBasename: '/v3',
   modesConfiguration: {
     '@ohif/mode-segmentation': {
-      hide: true,
+      hide: { $set: true },
     },
     '@idc/gcp-mode': {
-      hide: true,
-    }
+      hide: { $set: true },
+    },
   },
+  /**
+   * IDC branding / white labeling.
+   * Logo dimensions follow OHIF standard (h-[28px] with auto width for 4:1 aspect ratio).
+   */
   whiteLabeling: {
     createLogoComponentFn: function (React) {
       return React.createElement(
@@ -15,12 +19,13 @@ window.config = {
         {
           target: '_self',
           rel: 'noopener noreferrer',
-          className: 'text-purple-600 line-through',
+          className: 'flex items-center',
           href: '_X___IDC__LOGO__LINK___Y_',
         },
         React.createElement('img', {
           src: '/v3/IDC-Logo-WHITE.svg',
-          className: 'w-15 h-14 p-1',
+          alt: 'IDC Logo',
+          className: 'h-[48px] w-auto',
         })
       );
     },
