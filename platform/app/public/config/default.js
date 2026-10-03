@@ -1,247 +1,40 @@
 /** @type {AppTypes.Config} */
 
+/**
+ * IDC Viewer default configuration for local development.
+ * Based on OHIF 3.13 config structure with IDC-specific customizations.
+ */
 window.config = {
   name: 'config/default.js',
   routerBasename: null,
   extensions: [],
   modes: [],
-  customizationService: [
-    {
-      'panelSegmentation.disableEditing': { $set: true },
-      'panelMeasurement.disableEditing': { $set: true },
-    },
-  ],
-  showStudyList: true,
-  maxNumberOfWebWorkers: 3,
-  showWarningMessageForCrossOrigin: true,
-  showCPUFallbackMessage: true,
-  showLoadingIndicator: true,
-  experimentalStudyBrowserSort: false,
-  strictZSpacingForVolumeViewport: true,
-  groupEnabledModesFirst: true,
-  allowMultiSelectExport: false,
-  maxNumRequests: {
-    interaction: 100,
-    thumbnail: 75,
-    prefetch: 25,
-  },
-  showErrorDetails: 'always',
-  multimonitor: [
-    {
-      id: 'split',
-      test: ({ multimonitor }) => multimonitor === 'split',
-      screens: [
-        {
-          id: 'ohif0',
-          screen: null,
-          location: {
-            screen: 0,
-            width: 0.5,
-            height: 1,
-            left: 0,
-            top: 0,
-          },
-          options: 'location=no,menubar=no,scrollbars=no,status=no,titlebar=no',
-        },
-        {
-          id: 'ohif1',
-          screen: null,
-          location: {
-            width: 0.5,
-            height: 1,
-            left: 0.5,
-            top: 0,
-          },
-          options: 'location=no,menubar=no,scrollbars=no,status=no,titlebar=no',
-        },
-      ],
-    },
-    {
-      id: '2',
-      test: ({ multimonitor }) => multimonitor === '2',
-      screens: [
-        {
-          id: 'ohif0',
-          screen: 0,
-          location: {
-            width: 1,
-            height: 1,
-            left: 0,
-            top: 0,
-          },
-          options: 'fullscreen=yes,location=no,menubar=no,scrollbars=no,status=no,titlebar=no',
-        },
-        {
-          id: 'ohif1',
-          screen: 1,
-          location: {
-            width: 1,
-            height: 1,
-            left: 0,
-            top: 0,
-          },
-          options: 'fullscreen=yes,location=no,menubar=no,scrollbars=no,status=no,titlebar=no',
-        },
-      ],
-    },
-  ],
-  defaultDataSourceName: 'ohif',
-  dataSources: [
-    {
-      namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
-      sourceName: 'ohif',
-      configuration: {
-        friendlyName: 'AWS S3 Static wado server',
-        name: 'aws',
-        wadoUriRoot: 'https://d14fa38qiwhyfd.cloudfront.net/dicomweb',
-        qidoRoot: 'https://d14fa38qiwhyfd.cloudfront.net/dicomweb',
-        wadoRoot: 'https://d14fa38qiwhyfd.cloudfront.net/dicomweb',
-        qidoSupportsIncludeField: false,
-        imageRendering: 'wadors',
-        thumbnailRendering: 'wadors',
-        enableStudyLazyLoad: true,
-        supportsFuzzyMatching: true,
-        supportsWildcard: false,
-        staticWado: true,
-        singlepart: 'bulkdata,video',
-        bulkDataURI: {
-          enabled: true,
-          relativeResolution: 'studies',
-          transform: url => url.replace('/pixeldata.mp4', '/rendered'),
-        },
-        omitQuotationForMultipartRequest: true,
-      },
-    },
-    {
-      namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
-      sourceName: 'ohif2',
-      configuration: {
-        friendlyName: 'AWS S3 Static wado secondary server',
-        name: 'aws',
-        wadoUriRoot: 'https://dd14fa38qiwhyfd.cloudfront.net/dicomweb',
-        qidoRoot: 'https://dd14fa38qiwhyfd.cloudfront.net/dicomweb',
-        wadoRoot: 'https://dd14fa38qiwhyfd.cloudfront.net/dicomweb',
-        qidoSupportsIncludeField: false,
-        supportsReject: false,
-        imageRendering: 'wadors',
-        thumbnailRendering: 'wadors',
-        enableStudyLazyLoad: true,
-        supportsFuzzyMatching: false,
-        supportsWildcard: true,
-        staticWado: true,
-        singlepart: 'bulkdata,video',
-        bulkDataURI: {
-          enabled: true,
-          relativeResolution: 'studies',
-        },
-        omitQuotationForMultipartRequest: true,
-      },
-    },
-    {
-      namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
-      sourceName: 'ohif3',
-      configuration: {
-        friendlyName: 'AWS S3 Static wado secondary server',
-        name: 'aws',
-        wadoUriRoot: 'https://d3t6nz73ql33tx.cloudfront.net/dicomweb',
-        qidoRoot: 'https://d3t6nz73ql33tx.cloudfront.net/dicomweb',
-        wadoRoot: 'https://d3t6nz73ql33tx.cloudfront.net/dicomweb',
-        qidoSupportsIncludeField: false,
-        supportsReject: false,
-        imageRendering: 'wadors',
-        thumbnailRendering: 'wadors',
-        enableStudyLazyLoad: true,
-        supportsFuzzyMatching: false,
-        supportsWildcard: true,
-        staticWado: true,
-        singlepart: 'bulkdata,video',
-        bulkDataURI: {
-          enabled: true,
-          relativeResolution: 'studies',
-        },
-        omitQuotationForMultipartRequest: true,
-      },
-    },
-    {
-      namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
-      sourceName: 'local5000',
-      configuration: {
-        friendlyName: 'Static WADO Local Data',
-        name: 'DCM4CHEE',
-        qidoRoot: 'http://localhost:5000/dicomweb',
-        wadoRoot: 'http://localhost:5000/dicomweb',
-        qidoSupportsIncludeField: false,
-        supportsReject: true,
-        supportsStow: true,
-        imageRendering: 'wadors',
-        thumbnailRendering: 'wadors',
-        enableStudyLazyLoad: true,
-        supportsFuzzyMatching: false,
-        supportsWildcard: true,
-        staticWado: true,
-        singlepart: 'video',
-        bulkDataURI: {
-          enabled: true,
-          relativeResolution: 'studies',
-        },
-      },
-    },
-    {
-      namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
-      sourceName: 'orthanc',
-      configuration: {
-        friendlyName: 'local Orthanc DICOMWeb Server',
-        name: 'DCM4CHEE',
-        wadoUriRoot: 'http://localhost/pacs/dicom-web',
-        qidoRoot: 'http://localhost/pacs/dicom-web',
-        wadoRoot: 'http://localhost/pacs/dicom-web',
-        qidoSupportsIncludeField: true,
-        supportsReject: true,
-        dicomUploadEnabled: true,
-        imageRendering: 'wadors',
-        thumbnailRendering: 'wadors',
-        enableStudyLazyLoad: true,
-        supportsFuzzyMatching: true,
-        supportsWildcard: true,
-        omitQuotationForMultipartRequest: true,
-        bulkDataURI: {
-          enabled: true,
-        },
-      },
-    },
-    {
-      namespace: '@ohif/extension-default.dataSourcesModule.dicomwebproxy',
-      sourceName: 'dicomwebproxy',
-      configuration: {
-        friendlyName: 'dicomweb delegating proxy',
-        name: 'dicomwebproxy',
-      },
-    },
-    {
-      namespace: '@ohif/extension-default.dataSourcesModule.dicomjson',
-      sourceName: 'dicomjson',
-      configuration: {
-        friendlyName: 'dicom json',
-        name: 'json',
-      },
-    },
-    {
-      namespace: '@ohif/extension-default.dataSourcesModule.dicomlocal',
-      sourceName: 'dicomlocal',
-      configuration: {
-        friendlyName: 'dicom local',
-      },
-    },
-  ],
-  httpErrorHandler: error => {
-    console.warn(error.status);
-    console.warn('test, navigate to https://ohif.org/');
-  },
-};
 
-/** IDC Specific */
-window.config = {
-  ...window.config,
+  /**
+   * Customization service using the new phased format (OHIF 3.13+).
+   * The `global` array is applied after extensions register.
+   */
+  customizationService: {
+    global: [
+      {
+        'studyBrowser.studyMode': { $set: 'primary' },
+        'panelSegmentation.disableEditing': { $set: true },
+        'panelMeasurement.disableEditing': { $set: true },
+      },
+    ],
+  },
+
+  /**
+   * Disable the investigational use dialog for IDC.
+   */
+  investigationalUseDialog: {
+    option: 'never',
+  },
+
+  /**
+   * IDC branding / white labeling.
+   * Logo dimensions follow OHIF standard (h-[28px] with auto width for 4:1 aspect ratio).
+   */
   whiteLabeling: {
     createLogoComponentFn: function (React) {
       return React.createElement(
@@ -249,23 +42,30 @@ window.config = {
         {
           target: '_self',
           rel: 'noopener noreferrer',
-          className: 'text-purple-600 line-through',
+          className: 'flex items-center',
           href: '/',
         },
         React.createElement('img', {
           src: '/assets/idc.svg',
-          className: 'w-15 h-14 p-1',
+          alt: 'IDC Logo',
+          className: 'h-[48px] w-auto',
         })
       );
     },
   },
-  defaultDataSourceName: 'idc-dicomweb',
+
+  /**
+   * IDC instance annotations configuration (used by @ohif/extension-idc).
+   */
   instanceAnnotations: {
-    enabled: true, // master switch
-    maxLabels: 10, // collapse extra labels into a "+N more" indicator
-    showColor: true, // render a colored dot before each label
-    // colors: ['#5acce6', '#fcfa6b', '#7ee37e', '#f7a35c', '#e67ee6', '#ff7f7f'],
+    enabled: true,
+    maxLabels: 10,
+    showColor: true,
   },
+
+  /**
+   * IDC download commands dialog configuration (used by @ohif/extension-idc).
+   */
   idcDownloadCommandsDialog: {
     description: 'Follow the instructions below to download the study or series:',
     instructions: [
@@ -283,10 +83,52 @@ window.config = {
       },
     ],
   },
+
+  /**
+   * Mode visibility configuration.
+   * GCP mode is hidden by default (used via direct routing, not mode selector).
+   */
+  modesConfiguration: {
+    '@ohif/mode-segmentation': {
+      hide: { $set: true },
+    },
+    '@idc/gcp-mode': {
+      hide: { $set: true },
+    },
+  },
+
+  showStudyList: true,
   disableConfirmationPrompts: true,
+  maxNumberOfWebWorkers: 3,
+  showWarningMessageForCrossOrigin: true,
+  showCPUFallbackMessage: true,
+  showLoadingIndicator: true,
+  experimentalStudyBrowserSort: false,
+  strictZSpacingForVolumeViewport: true,
+  groupEnabledModesFirst: true,
+  allowMultiSelectExport: false,
+
+  maxNumRequests: {
+    interaction: 100,
+    thumbnail: 75,
+    prefetch: 25,
+  },
+
+  showErrorDetails: 'always',
+
+  /**
+   * Default data source - uses merge to combine IDC + GCP.
+   * When no ?gcp= param, only IDC data is shown.
+   * When ?gcp= param is present, both sources are merged.
+   */
+  defaultDataSourceName: 'idc-merge',
+
   dataSources: [
+    /**
+     * IDC's primary DICOMWeb server.
+     */
     {
-      friendlyName: 'dcmjs DICOMWeb Server',
+      friendlyName: 'IDC DICOMWeb Server',
       namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
       sourceName: 'idc-dicomweb',
       configuration: {
@@ -313,11 +155,81 @@ window.config = {
         omitQuotationForMultipartRequest: true,
       },
     },
+    /**
+     * GCP Healthcare API data source.
+     * Dynamically configured from ?gcp= query param.
+     */
+    {
+      friendlyName: 'GCP Healthcare API',
+      namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
+      sourceName: 'gcp',
+      configuration: {
+        name: 'gcp',
+        qidoSupportsIncludeField: false,
+        imageRendering: 'wadors',
+        thumbnailRendering: 'wadors',
+        enableStudyLazyLoad: true,
+        supportsFuzzyMatching: false,
+        supportsWildcard: false,
+        singlepart: 'bulkdata,video,pdf',
+        bulkDataURI: { enabled: false },
+        omitQuotationForMultipartRequest: true,
+        onConfiguration: function (dicomWebConfig, options) {
+          var query = options.query;
+          var gcpParam = query.get('gcp');
+
+          if (!gcpParam) {
+            return dicomWebConfig;
+          }
+
+          var gcpUrlRegex =
+            /^(https:\/\/healthcare\.googleapis\.com\/v1\/)?projects\/([^/]+)\/locations\/([^/]+)\/datasets\/([^/]+)\/dicomStores\/([^/]+)/;
+          var match = gcpParam.match(gcpUrlRegex);
+
+          if (!match) {
+            console.warn('[GCP Data Source] Invalid GCP URL format:', gcpParam);
+            return dicomWebConfig;
+          }
+
+          var dicomWebUrl =
+            'https://healthcare.googleapis.com/v1/projects/' +
+            match[2] +
+            '/locations/' +
+            match[3] +
+            '/datasets/' +
+            match[4] +
+            '/dicomStores/' +
+            match[5] +
+            '/dicomWeb';
+
+          return Object.assign({}, dicomWebConfig, {
+            wadoUriRoot: dicomWebUrl,
+            qidoRoot: dicomWebUrl,
+            wadoRoot: dicomWebUrl,
+          });
+        },
+      },
+    },
+    /**
+     * Merge data source - combines IDC and GCP data sources.
+     */
+    {
+      friendlyName: 'IDC + GCP Merge',
+      namespace: '@ohif/extension-default.dataSourcesModule.merge',
+      sourceName: 'idc-merge',
+      configuration: {
+        name: 'idc-merge',
+        seriesMerge: {
+          dataSourceNames: ['idc-dicomweb', 'gcp'],
+          defaultDataSourceName: 'idc-dicomweb',
+        },
+      },
+    },
     {
       namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
       sourceName: 'ohif',
       configuration: {
-        friendlyName: 'AWS S3 Static wado secondary server',
+        friendlyName: 'AWS S3 Static wado server',
         name: 'aws',
         wadoUriRoot: 'https://d14fa38qiwhyfd.cloudfront.net/dicomweb',
         qidoRoot: 'https://d14fa38qiwhyfd.cloudfront.net/dicomweb',
@@ -339,11 +251,101 @@ window.config = {
       },
     },
   ],
-  modesConfiguration: {
-    '@ohif/mode-segmentation': {
-      hide: true,
-    },
+
+  httpErrorHandler: error => {
+    console.warn(error.status);
+    console.warn('test, navigate to https://ohif.org/');
   },
+
+  /**
+   * IDC hotkeys configuration.
+   */
+  hotkeys: [
+    {
+      commandName: 'incrementActiveViewport',
+      label: 'Next Viewport',
+      keys: ['right'],
+    },
+    {
+      commandName: 'decrementActiveViewport',
+      label: 'Previous Viewport',
+      keys: ['left'],
+    },
+    { commandName: 'rotateViewportCW', label: 'Rotate Right', keys: ['r'] },
+    { commandName: 'rotateViewportCCW', label: 'Rotate Left', keys: ['l'] },
+    { commandName: 'invertViewport', label: 'Invert', keys: ['i'] },
+    {
+      commandName: 'flipViewportHorizontal',
+      label: 'Flip Horizontally',
+      keys: ['h'],
+    },
+    {
+      commandName: 'flipViewportVertical',
+      label: 'Flip Vertically',
+      keys: ['v'],
+    },
+    { commandName: 'scaleUpViewport', label: 'Zoom In', keys: ['+'] },
+    { commandName: 'scaleDownViewport', label: 'Zoom Out', keys: ['-'] },
+    { commandName: 'fitViewportToWindow', label: 'Zoom to Fit', keys: ['='] },
+    { commandName: 'resetViewport', label: 'Reset', keys: ['space'] },
+    { commandName: 'nextImage', label: 'Next Image', keys: ['down'] },
+    { commandName: 'previousImage', label: 'Previous Image', keys: ['up'] },
+    {
+      commandName: 'setToolActive',
+      commandOptions: { toolName: 'Zoom' },
+      label: 'Zoom',
+      keys: ['z'],
+    },
+    {
+      commandName: 'windowLevelPreset1',
+      label: 'W/L Preset 1',
+      keys: ['1'],
+    },
+    {
+      commandName: 'windowLevelPreset2',
+      label: 'W/L Preset 2',
+      keys: ['2'],
+    },
+    {
+      commandName: 'windowLevelPreset3',
+      label: 'W/L Preset 3',
+      keys: ['3'],
+    },
+    {
+      commandName: 'windowLevelPreset4',
+      label: 'W/L Preset 4',
+      keys: ['4'],
+    },
+    {
+      commandName: 'windowLevelPreset5',
+      label: 'W/L Preset 5',
+      keys: ['5'],
+    },
+    {
+      commandName: 'windowLevelPreset6',
+      label: 'W/L Preset 6',
+      keys: ['6'],
+    },
+    {
+      commandName: 'windowLevelPreset7',
+      label: 'W/L Preset 7',
+      keys: ['7'],
+    },
+    {
+      commandName: 'windowLevelPreset8',
+      label: 'W/L Preset 8',
+      keys: ['8'],
+    },
+    {
+      commandName: 'windowLevelPreset9',
+      label: 'W/L Preset 9',
+      keys: ['9'],
+    },
+  ],
+
+  /**
+   * Google OAuth configuration for IDC.
+   */
   oidc: [
     {
       authority: 'https://accounts.google.com',
