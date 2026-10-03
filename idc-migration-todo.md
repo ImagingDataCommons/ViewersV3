@@ -14,6 +14,7 @@ This document tracks the migration status from IDC's OHIF v3.12.14 fork to v3.13
 | Adapters Patch | ✅ Renamed |
 | Config Format | ✅ Migrated |
 | GCP Extension | ✅ Datasource fixed (PR #6) |
+| GCP Mode | ✅ Dependencies fixed (PR #16) |
 
 ---
 
@@ -180,11 +181,25 @@ The `ohif-gcp-extension` datasource configuration was using deprecated propertie
 
 ---
 
+## GCP Mode Fixes (Completed)
+
+The `ohif-gcp-mode` package.json had compatibility issues with OHIF 3.13.
+
+**Fixed in PR #16 commit `0317d41`:**
+
+| Issue | Before | After |
+|-------|--------|-------|
+| Node version | `>=14` | `>=24` |
+| Missing peer dep | - | `@ohif/extension-cornerstone-dicom-pmap: 3.13.12` |
+| Peer dep versions | `3.13.10` | `3.13.12` |
+
+---
+
 ## Dependencies
 
 This PR requires these companion PRs merged first:
 - [ ] https://github.com/ImagingDataCommons/ohif-gcp-extension/pull/6 ✅ Datasource fix added
-- [ ] https://github.com/ImagingDataCommons/ohif-gcp-mode/pull/16
+- [ ] https://github.com/ImagingDataCommons/ohif-gcp-mode/pull/16 ✅ Dependencies fix added
 
 After merging, update `platform/app/package.json` references back to `#main`.
 
