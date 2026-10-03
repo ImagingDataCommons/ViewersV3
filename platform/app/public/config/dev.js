@@ -5,6 +5,9 @@
  *
  * This is the default config for the dev server (`pnpm run dev`, `dev:fast`,
  * `start`). Includes IDC-specific settings: OIDC, branding, data sources.
+ *
+ * NOTE: The 'gcp' data source and merge are created dynamically by @idc/gcp-extension
+ * when ?gcp= query param is present.
  */
 window.config = {
   name: 'config/dev.js',
@@ -94,9 +97,13 @@ window.config = {
 
   /**
    * Mode visibility configuration.
+   * GCP mode is hidden by default (used via direct routing, not mode selector).
    */
   modesConfiguration: {
     '@ohif/mode-segmentation': {
+      hide: { $set: true },
+    },
+    '@idc/gcp-mode': {
       hide: { $set: true },
     },
   },
@@ -180,9 +187,16 @@ window.config = {
     },
   ],
 
+  /**
+   * Default data source - IDC's primary DICOMWeb server.
+   * GCP data source and merge are created by @idc/gcp-extension when ?gcp= param is present.
+   */
   defaultDataSourceName: 'idc-dicomweb',
 
   dataSources: [
+    /**
+     * IDC's primary DICOMWeb server.
+     */
     {
       friendlyName: 'IDC DICOMWeb Server',
       namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
@@ -195,14 +209,14 @@ window.config = {
           'https://testing-proxy.canceridc.dev/current/viewer-only-no-downloads-see-tinyurl-dot-com-slash-3j3d9jyp/dicomWeb',
         wadoRoot:
           'https://testing-proxy.canceridc.dev/current/viewer-only-no-downloads-see-tinyurl-dot-com-slash-3j3d9jyp/dicomWeb',
-        qidoSupportsIncludeField: true,
+        qidoSupportsIncludeField: false,
         supportsReject: false,
         imageRendering: 'wadors',
         thumbnailRendering: 'wadors',
         enableStudyLazyLoad: true,
-        supportsFuzzyMatching: true,
+        supportsFuzzyMatching: false,
         supportsWildcard: false,
-        staticWado: false,
+        staticWado: true,
         singlepart: 'bulkdata,video',
         bulkDataURI: {
           enabled: false,

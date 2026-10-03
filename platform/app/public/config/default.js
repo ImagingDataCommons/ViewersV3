@@ -86,10 +86,13 @@ window.config = {
 
   /**
    * Mode visibility configuration.
-   * Hide segmentation mode (use GCP mode instead for IDC).
+   * GCP mode is hidden by default (used via direct routing, not mode selector).
    */
   modesConfiguration: {
     '@ohif/mode-segmentation': {
+      hide: { $set: true },
+    },
+    '@idc/gcp-mode': {
       hide: { $set: true },
     },
   },
@@ -113,9 +116,17 @@ window.config = {
 
   showErrorDetails: 'always',
 
-  defaultDataSourceName: 'idc-dicomweb',
+  /**
+   * Default data source - uses merge to combine IDC + GCP.
+   * When no ?gcp= param, only IDC data is shown.
+   * When ?gcp= param is present, both sources are merged.
+   */
+  defaultDataSourceName: 'idc-merge',
 
   dataSources: [
+    /**
+     * IDC's primary DICOMWeb server.
+     */
     {
       friendlyName: 'IDC DICOMWeb Server',
       namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
@@ -142,6 +153,76 @@ window.config = {
           relativeResolution: 'studies',
         },
         omitQuotationForMultipartRequest: true,
+      },
+    },
+    /**
+     * GCP Healthcare API data source.
+     * Dynamically configured from ?gcp= query param.
+     */
+    {
+      friendlyName: 'GCP Healthcare API',
+      namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
+      sourceName: 'gcp',
+      configuration: {
+        name: 'gcp',
+        qidoSupportsIncludeField: false,
+        imageRendering: 'wadors',
+        thumbnailRendering: 'wadors',
+        enableStudyLazyLoad: true,
+        supportsFuzzyMatching: false,
+        supportsWildcard: false,
+        singlepart: 'bulkdata,video,pdf',
+        bulkDataURI: { enabled: false },
+        omitQuotationForMultipartRequest: true,
+        onConfiguration: function (dicomWebConfig, options) {
+          var query = options.query;
+          var gcpParam = query.get('gcp');
+
+          if (!gcpParam) {
+            return dicomWebConfig;
+          }
+
+          var gcpUrlRegex =
+            /^(https:\/\/healthcare\.googleapis\.com\/v1\/)?projects\/([^/]+)\/locations\/([^/]+)\/datasets\/([^/]+)\/dicomStores\/([^/]+)/;
+          var match = gcpParam.match(gcpUrlRegex);
+
+          if (!match) {
+            console.warn('[GCP Data Source] Invalid GCP URL format:', gcpParam);
+            return dicomWebConfig;
+          }
+
+          var dicomWebUrl =
+            'https://healthcare.googleapis.com/v1/projects/' +
+            match[2] +
+            '/locations/' +
+            match[3] +
+            '/datasets/' +
+            match[4] +
+            '/dicomStores/' +
+            match[5] +
+            '/dicomWeb';
+
+          return Object.assign({}, dicomWebConfig, {
+            wadoUriRoot: dicomWebUrl,
+            qidoRoot: dicomWebUrl,
+            wadoRoot: dicomWebUrl,
+          });
+        },
+      },
+    },
+    /**
+     * Merge data source - combines IDC and GCP data sources.
+     */
+    {
+      friendlyName: 'IDC + GCP Merge',
+      namespace: '@ohif/extension-default.dataSourcesModule.merge',
+      sourceName: 'idc-merge',
+      configuration: {
+        name: 'idc-merge',
+        seriesMerge: {
+          dataSourceNames: ['idc-dicomweb', 'gcp'],
+          defaultDataSourceName: 'idc-dicomweb',
+        },
       },
     },
     {

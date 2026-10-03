@@ -121,3 +121,5 @@ overrides:
   # browserslist-stats.json).
   'browserslist@<4.28.7': 4.28.8
   'image-size@>=0.6.3 <2.0.4': 2.0.4
+  '@idc/gcp-extension': link:../ohif-gcp-extension
+  '@idc/gcp-mode': link:../ohif-gcp-mode

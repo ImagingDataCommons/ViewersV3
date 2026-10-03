@@ -244,11 +244,19 @@ overrides:
   pacote@>=11.2.7 <21.5.1: 21.5.1
   browserslist@<4.28.7: 4.28.8
   image-size@>=0.6.3 <2.0.4: 2.0.4
+  '@idc/gcp-extension': link:../ohif-gcp-extension
+  '@idc/gcp-mode': link:../ohif-gcp-mode
 
 importers:
 
   .:
     dependencies:
+      '@idc/gcp-extension':
+        specifier: link:../ohif-gcp-extension
+        version: link:../ohif-gcp-extension
+      '@idc/gcp-mode':
+        specifier: link:../ohif-gcp-mode
+        version: link:../ohif-gcp-mode
       execa:
         specifier: 8.0.1
         version: 8.0.1
@@ -1610,11 +1618,11 @@ importers:
         specifier: 1.3.3
         version: 1.3.3
       '@idc/gcp-extension':
-        specifier: file:../../../ohif-gcp-extension
-        version: file:../ohif-gcp-extension(@ohif/app@platform+app)(@ohif/core@platform+core)(@ohif/extension-cornerstone@extensions+cornerstone)(@ohif/extension-default@extensions+default)(@ohif/i18n@platform+i18n)(@ohif/ui-next@platform+ui-next)(prop-types@15.8.1)(react-dom@18.3.1(react@18.3.1))(react-i18next@12.3.1(i18next@19.9.2)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-router-dom@6.30.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-router@6.30.3(react@18.3.1))(react@18.3.1)(webpack-merge@5.10.0)(webpack@5.105.0(@swc/core@1.15.13(@swc/helpers@0.5.21)))
+        specifier: link:../../../ohif-gcp-extension
+        version: link:../../../ohif-gcp-extension
       '@idc/gcp-mode':
-        specifier: file:../../../ohif-gcp-mode
-        version: file:../ohif-gcp-mode(@ohif/core@platform+core)(@ohif/extension-cornerstone-dicom-pmap@extensions+cornerstone-dicom-pmap)(@ohif/extension-cornerstone-dicom-rt@extensions+cornerstone-dicom-rt)(@ohif/extension-cornerstone-dicom-seg@extensions+cornerstone-dicom-seg)(@ohif/extension-cornerstone-dicom-sr@extensions+cornerstone-dicom-sr)(@ohif/extension-cornerstone@extensions+cornerstone)(@ohif/extension-default@extensions+default)(@ohif/extension-dicom-pdf@extensions+dicom-pdf)(@ohif/extension-dicom-video@extensions+dicom-video)(@ohif/extension-measurement-tracking@extensions+measurement-tracking)
+        specifier: link:../../../ohif-gcp-mode
+        version: link:../../../ohif-gcp-mode
       '@ohif/core':
         specifier: workspace:*
         version: link:../core
@@ -4024,40 +4032,6 @@ packages:
   '@icr/polyseg-wasm@0.4.0':
     resolution: {integrity: sha512-3sZmiwG8I0NaqPle0L7+V/ZexiR7IjIUFkUsaOoFI9rNuBGyyMMmxAxnCmqcDFtBDk9h+JEYJf6e3NnqlHi/HQ==}
     engines: {node: '>=0.14'}
-
-  '@idc/gcp-extension@file:../ohif-gcp-extension':
-    resolution: {directory: ../ohif-gcp-extension, type: directory}
-    engines: {node: '>=14', npm: '>=6', yarn: '>=1.18.0'}
-    peerDependencies:
-      '@ohif/app': 3.13.12
-      '@ohif/core': 3.13.12
-      '@ohif/extension-cornerstone': 3.13.12
-      '@ohif/extension-default': 3.13.12
-      '@ohif/i18n': 3.13.12
-      '@ohif/ui-next': 3.13.12
-      prop-types: 15.8.1
-      react: 18.3.1
-      react-dom: 18.3.1
-      react-i18next: 12.3.1
-      react-router: 6.30.3
-      react-router-dom: 6.30.3
-      webpack: 5.105.0
-      webpack-merge: 5.10.0
-
-  '@idc/gcp-mode@file:../ohif-gcp-mode':
-    resolution: {directory: ../ohif-gcp-mode, type: directory}
-    engines: {node: '>=24'}
-    peerDependencies:
-      '@ohif/core': 3.13.12
-      '@ohif/extension-cornerstone': 3.13.12
-      '@ohif/extension-cornerstone-dicom-pmap': 3.13.12
-      '@ohif/extension-cornerstone-dicom-rt': 3.13.12
-      '@ohif/extension-cornerstone-dicom-seg': 3.13.12
-      '@ohif/extension-cornerstone-dicom-sr': 3.13.12
-      '@ohif/extension-default': 3.13.12
-      '@ohif/extension-dicom-pdf': 3.13.12
-      '@ohif/extension-dicom-video': 3.13.12
-      '@ohif/extension-measurement-tracking': 3.13.12
 
   '@img/colour@1.1.0':
     resolution: {integrity: sha512-Td76q7j57o/tLVdgS746cYARfSyxk8iEfRxewL9h4OMzYhbW4TAcppl0mT4eyqXddh6L/jwoM75mo7ixa/pCeQ==}
@@ -16415,38 +16389,6 @@ snapshots:
       react: 18.3.1
 
   '@icr/polyseg-wasm@0.4.0': {}
-
-  '@idc/gcp-extension@file:../ohif-gcp-extension(@ohif/app@platform+app)(@ohif/core@platform+core)(@ohif/extension-cornerstone@extensions+cornerstone)(@ohif/extension-default@extensions+default)(@ohif/i18n@platform+i18n)(@ohif/ui-next@platform+ui-next)(prop-types@15.8.1)(react-dom@18.3.1(react@18.3.1))(react-i18next@12.3.1(i18next@19.9.2)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-router-dom@6.30.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-router@6.30.3(react@18.3.1))(react@18.3.1)(webpack-merge@5.10.0)(webpack@5.105.0(@swc/core@1.15.13(@swc/helpers@0.5.21)))':
-    dependencies:
-      '@babel/runtime': 7.29.7
-      '@ohif/app': link:platform/app
-      '@ohif/core': link:platform/core
-      '@ohif/extension-cornerstone': link:extensions/cornerstone
-      '@ohif/extension-default': link:extensions/default
-      '@ohif/i18n': link:platform/i18n
-      '@ohif/ui-next': link:platform/ui-next
-      prop-types: 15.8.1
-      react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
-      react-i18next: 12.3.1(i18next@19.9.2)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      react-router: 6.30.3(react@18.3.1)
-      react-router-dom: 6.30.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      webpack: 5.105.0(@swc/core@1.15.13(@swc/helpers@0.5.21))
-      webpack-merge: 5.10.0
-
-  '@idc/gcp-mode@file:../ohif-gcp-mode(@ohif/core@platform+core)(@ohif/extension-cornerstone-dicom-pmap@extensions+cornerstone-dicom-pmap)(@ohif/extension-cornerstone-dicom-rt@extensions+cornerstone-dicom-rt)(@ohif/extension-cornerstone-dicom-seg@extensions+cornerstone-dicom-seg)(@ohif/extension-cornerstone-dicom-sr@extensions+cornerstone-dicom-sr)(@ohif/extension-cornerstone@extensions+cornerstone)(@ohif/extension-default@extensions+default)(@ohif/extension-dicom-pdf@extensions+dicom-pdf)(@ohif/extension-dicom-video@extensions+dicom-video)(@ohif/extension-measurement-tracking@extensions+measurement-tracking)':
-    dependencies:
-      '@babel/runtime': 7.29.7
-      '@ohif/core': link:platform/core
-      '@ohif/extension-cornerstone': link:extensions/cornerstone
-      '@ohif/extension-cornerstone-dicom-pmap': link:extensions/cornerstone-dicom-pmap
-      '@ohif/extension-cornerstone-dicom-rt': link:extensions/cornerstone-dicom-rt
-      '@ohif/extension-cornerstone-dicom-seg': link:extensions/cornerstone-dicom-seg
-      '@ohif/extension-cornerstone-dicom-sr': link:extensions/cornerstone-dicom-sr
-      '@ohif/extension-default': link:extensions/default
-      '@ohif/extension-dicom-pdf': link:extensions/dicom-pdf
-      '@ohif/extension-dicom-video': link:extensions/dicom-video
-      '@ohif/extension-measurement-tracking': link:extensions/measurement-tracking
 
   '@img/colour@1.1.0': {}
 

@@ -1,3 +1,8 @@
+/**
+ * IDC Viewer production configuration template.
+ *
+ * Placeholders like _X___IDC__Z__ROOT___Y_ are replaced during deployment.
+ */
 window.config = {
   routerBasename: '/v3',
   modesConfiguration: {
@@ -63,9 +68,7 @@ window.config = {
   },
   showStudyList: false,
   disableConfirmationPrompts: true,
-  // some windows systems have issues with more than 3 web workers
   maxNumberOfWebWorkers: 3,
-  // below flag is for performance reasons, but it might not work for all servers
   showWarningMessageForCrossOrigin: true,
   showCPUFallbackMessage: true,
   showLoadingIndicator: true,
@@ -73,23 +76,18 @@ window.config = {
   maxNumRequests: {
     interaction: 100,
     thumbnail: 75,
-    // Prefetch number is dependent on the http protocol. For http 2 or
-    // above, the number of requests can be go a lot higher.
     prefetch: 25,
   },
-  // filterQueryParam: false,
-  defaultDataSourceName: 'idc-dicomweb',
-  /* Dynamic config allows user to pass "configUrl" query string this allows to load config without recompiling application. The regex will ensure valid configuration source */
-  // dangerouslyUseDynamicConfig: {
-  //   enabled: true,
-  //   // regex will ensure valid configuration source and default is /.*/ which matches any character. To use this, setup your own regex to choose a specific source of configuration only.
-  //   // Example 1, to allow numbers and letters in an absolute or sub-path only.
-  //   // regex: /(0-9A-Za-z.]+)(\/[0-9A-Za-z.]+)*/
-  //   // Example 2, to restricts to either hosptial.com or othersite.com.
-  //   // regex: /(https:\/\/hospital.com(\/[0-9A-Za-z.]+)*)|(https:\/\/othersite.com(\/[0-9A-Za-z.]+)*)/
-  //   regex: /.*/,
-  // },
+  /**
+   * Default data source - uses merge to combine IDC + GCP.
+   * When no ?gcp= param, only IDC data is shown.
+   * When ?gcp= param is present, both sources are merged.
+   */
+  defaultDataSourceName: 'idc-merge',
   dataSources: [
+    /**
+     * IDC's primary DICOMWeb server (static WADO).
+     */
     {
       friendlyName: 'IDC Data Source',
       namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
@@ -109,19 +107,85 @@ window.config = {
         staticWado: true,
         singlepart: 'bulkdata,video',
         omitQuotationForMultipartRequest: true,
-        /** If true RT does not work */
         bulkDataURI: {
           enabled: false,
         },
       },
     },
+    /**
+     * GCP Healthcare API data source.
+     * Dynamically configured from ?gcp= query param.
+     */
+    {
+      friendlyName: 'GCP Healthcare API',
+      namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
+      sourceName: 'gcp',
+      configuration: {
+        name: 'gcp',
+        qidoSupportsIncludeField: false,
+        imageRendering: 'wadors',
+        thumbnailRendering: 'wadors',
+        enableStudyLazyLoad: true,
+        supportsFuzzyMatching: false,
+        supportsWildcard: false,
+        singlepart: 'bulkdata,video,pdf',
+        bulkDataURI: { enabled: false },
+        omitQuotationForMultipartRequest: true,
+        onConfiguration: function (dicomWebConfig, options) {
+          var query = options.query;
+          var gcpParam = query.get('gcp');
+
+          if (!gcpParam) {
+            return dicomWebConfig;
+          }
+
+          var gcpUrlRegex =
+            /^(https:\/\/healthcare\.googleapis\.com\/v1\/)?projects\/([^/]+)\/locations\/([^/]+)\/datasets\/([^/]+)\/dicomStores\/([^/]+)/;
+          var match = gcpParam.match(gcpUrlRegex);
+
+          if (!match) {
+            console.warn('[GCP Data Source] Invalid GCP URL format:', gcpParam);
+            return dicomWebConfig;
+          }
+
+          var dicomWebUrl =
+            'https://healthcare.googleapis.com/v1/projects/' +
+            match[2] +
+            '/locations/' +
+            match[3] +
+            '/datasets/' +
+            match[4] +
+            '/dicomStores/' +
+            match[5] +
+            '/dicomWeb';
+
+          return Object.assign({}, dicomWebConfig, {
+            wadoUriRoot: dicomWebUrl,
+            qidoRoot: dicomWebUrl,
+            wadoRoot: dicomWebUrl,
+          });
+        },
+      },
+    },
+    /**
+     * Merge data source - combines IDC and GCP data sources.
+     */
+    {
+      friendlyName: 'IDC + GCP Merge',
+      namespace: '@ohif/extension-default.dataSourcesModule.merge',
+      sourceName: 'idc-merge',
+      configuration: {
+        name: 'idc-merge',
+        seriesMerge: {
+          dataSourceNames: ['idc-dicomweb', 'gcp'],
+          defaultDataSourceName: 'idc-dicomweb',
+        },
+      },
+    },
   ],
   httpErrorHandler: error => {
-    // This is 429 when rejected from the public idc sandbox too often.
     console.warn(error.status);
     if (error.status == 429) {
-      // Could use services manager here to bring up a dialog/modal if needed.
-      // console.warn('test, navigate to https://ohif.org/');
       window.location = '_X___IDC__Z__QUOTA___Y_';
     }
   },
@@ -155,23 +219,12 @@ window.config = {
     { commandName: 'resetViewport', label: 'Reset', keys: ['space'] },
     { commandName: 'nextImage', label: 'Next Image', keys: ['down'] },
     { commandName: 'previousImage', label: 'Previous Image', keys: ['up'] },
-    // {
-    //   commandName: 'previousViewportDisplaySet',
-    //   label: 'Previous Series',
-    //   keys: ['pagedown'],
-    // },
-    // {
-    //   commandName: 'nextViewportDisplaySet',
-    //   label: 'Next Series',
-    //   keys: ['pageup'],
-    // },
     {
       commandName: 'setToolActive',
       commandOptions: { toolName: 'Zoom' },
       label: 'Zoom',
       keys: ['z'],
     },
-    // ~ Window level presets
     {
       commandName: 'windowLevelPreset1',
       label: 'W/L Preset 1',

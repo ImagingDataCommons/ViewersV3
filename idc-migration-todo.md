@@ -13,8 +13,8 @@ This document tracks the migration status from IDC's OHIF v3.12.14 fork to v3.13
 | Deploy Scripts | ✅ Updated |
 | Adapters Patch | ✅ Renamed |
 | Config Format | ✅ Migrated |
-| GCP Extension | ✅ Datasource fixed (PR #6) |
-| GCP Mode | ✅ Dependencies fixed (PR #16) |
+| GCP Extension | ✅ Updated for OHIF 3.13 compatibility |
+| GCP Mode | ✅ Updated for OHIF 3.13 compatibility |
 
 ---
 
@@ -39,10 +39,12 @@ This document tracks the migration status from IDC's OHIF v3.12.14 fork to v3.13
 
 ### Standard Verification
 
-- [ ] **GCP Mode**
+- [ ] **GCP Data Source Merge**
   - Verify Google OAuth login works
-  - Test DICOMweb data source connections
-  - Confirm mode visibility (segmentation hidden, GCP shown)
+  - Test query param approach: `?StudyInstanceUIDs=...&gcp=projects/.../dicomStores/...`
+  - Test GCP routing: `/projects/.../locations/.../datasets/.../dicomStores/.../study/...`
+  - Confirm both IDC and GCP series appear in merged view
+  - Verify mode selector navigation works between modes
 
 - [ ] **Download Dialog**
   - Verify idc-index download commands display correctly
@@ -155,8 +157,9 @@ These are improvements, not regressions.
 - `idc-deploy-shell/buildViewer.sh` (pnpm, rspack)
 - `idc-deploy-shell/install-deps.sh` (Node 24, pnpm)
 - `patches/@cornerstonejs+adapters+5.6.8.patch` (renamed from 4.15.29)
-- `platform/app/public/config/default.js` (IDC config)
-- `platform/app/public/config/dev.js` (IDC dev config)
+- `platform/app/public/config/default.js` (IDC config, customizationService format)
+- `platform/app/public/config/dev.js` (IDC dev config, customizationService format)
+- `platform/app/pluginConfig.json` (includes @idc/gcp-extension and @idc/gcp-mode)
 
 ### Mode Customizations (initToolGroups)
 - `modes/basic/src/initToolGroups.ts`
@@ -165,43 +168,42 @@ These are improvements, not regressions.
 
 ---
 
-## GCP Extension Datasource Fix (Completed)
+## GCP Extension/Mode Updates
 
-The `ohif-gcp-extension` datasource configuration was using deprecated properties incompatible with OHIF 3.13.
+### OHIF 3.13 Compatibility Changes
 
-**Fixed in PR #6 commit `8f79c25`:**
+The `@idc/gcp-extension` and `@idc/gcp-mode` packages have been updated for OHIF 3.13 compatibility:
 
-| Property | Before (Broken) | After (Fixed) |
-|----------|-----------------|---------------|
-| `useBulkDataURI` | `false` (deprecated) | Removed |
-| `bulkDataURI` | `undefined` | `{ enabled: false }` |
-| `qidoSupportsIncludeField` | `false` | `true` |
-| `supportsFuzzyMatching` | `false` | `true` |
-| `omitQuotationForMultipartRequest` | (missing) | `true` |
+| Change | Before (v3.12) | After (v3.13) |
+|--------|----------------|---------------|
+| `useBulkDataURI` | `useBulkDataURI: false` | `bulkDataURI: { enabled: false }` |
 
----
+### How GCP Data Sources Work
 
-## GCP Mode Fixes (Completed)
+**GCP Extension** (`preRegistration`):
+- Creates `gcp` data source with `onConfiguration` for `?gcp=` query param parsing
+- Creates `gcp-extension-merge` merge data source when `?gcp=` param is present
+- Provides mode selector customization for navigation
 
-The `ohif-gcp-mode` package.json had compatibility issues with OHIF 3.13.
+**GCP Mode** (`onModeInit`):
+- Creates `gcp-mode-dicomweb-data-source` for route-based GCP paths
+- Creates `gcp-mode-merge` merge data source when `?gcp=` param is present
+- Provides custom routing: `/projects/:project/locations/:location/datasets/:dataset/dicomStores/:dicomStore/study/:StudyInstanceUIDs`
 
-**Fixed in PR #16 commit `0317d41`:**
+### What's Preserved (No Regressions)
 
-| Issue | Before | After |
-|-------|--------|-------|
-| Node version | `>=14` | `>=24` |
-| Missing peer dep | - | `@ohif/extension-cornerstone-dicom-pmap: 3.13.12` |
-| Peer dep versions | `3.13.10` | `3.13.12` |
+1. **GCP Mode custom routing:** `/projects/:project/locations/:location/datasets/:dataset/dicomStores/:dicomStore/study/:StudyInstanceUIDs`
+2. **Query param support:** `?gcp=projects/PROJECT/locations/LOCATION/datasets/DATASET/dicomStores/STORE`
+3. **Mode selector customization:** Proper navigation between GCP and standard modes
+4. **Merge data source:** Combining IDC + GCP data at series level
 
 ---
 
 ## Dependencies
 
-This PR requires these companion PRs merged first:
-- [ ] https://github.com/ImagingDataCommons/ohif-gcp-extension/pull/6 ✅ Datasource fix added
-- [ ] https://github.com/ImagingDataCommons/ohif-gcp-mode/pull/16 ✅ Dependencies fix added
-
-After merging, update `platform/app/package.json` references back to `#main`.
+Companion PRs needed for the GCP packages with OHIF 3.13 compatibility:
+- https://github.com/ImagingDataCommons/ohif-gcp-extension
+- https://github.com/ImagingDataCommons/ohif-gcp-mode
 
 ---
 
