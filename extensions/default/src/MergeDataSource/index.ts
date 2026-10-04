@@ -86,11 +86,6 @@ export const mergeMap: MergeMap = {
           }
         });
 
-        console.debug(
-          `[IDC-MERGE-DEBUG] seriesSourceMap: Added ${newSeriesAdded.length} series from '${sourceName}':`,
-          newSeriesAdded
-        );
-        console.debug(`[IDC-MERGE-DEBUG] seriesSourceMap total size:`, seriesSourceMap.size);
       }
       return seriesResults;
     },
@@ -285,14 +280,6 @@ export const callByRetrieveAETitle = ({
   }
 
   const selectedSource = retrieveAETitle || defaultDataSourceName;
-
-  console.debug(
-    `[IDC-MERGE-DEBUG] callByRetrieveAETitle(${path}):`,
-    `seriesUID=${seriesUID?.substring(0, 40)}...`,
-    `mapLookup=${seriesUID ? seriesSourceMap.get(seriesUID) : 'N/A'}`,
-    `selected=${selectedSource}`
-  );
-
   const [dataSource] = extensionManager.getDataSources(selectedSource);
   return dataSource[path](...args);
 };
@@ -434,12 +421,6 @@ function createMergeDataSourceApi(
         }
 
         const selectedSource = retrieveAETitle || defaultDataSourceName;
-
-        console.debug(
-          `[IDC-MERGE-DEBUG] prefetchInstanceFrames routing to '${selectedSource}' for series`,
-          seriesUID?.substring(0, 40)
-        );
-
         const [dataSource] = extensionManager.getDataSources(selectedSource);
         return dataSource?.retrieve?.prefetchInstanceFrames?.(args);
       },
