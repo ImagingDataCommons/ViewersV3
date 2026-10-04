@@ -65,8 +65,8 @@
     "cs3d:unlink": "node libs/@cornerstonejs/scripts/unlink-ohif-cornerstone-node-modules.mjs ."
   },
   "dependencies": {
-    "@idc/gcp-extension": "link:../ohif-gcp-extension",
-    "@idc/gcp-mode": "link:../ohif-gcp-mode",
+    "@idc/gcp-extension": "github:ImagingDataCommons/ohif-gcp-extension#main",
+    "@idc/gcp-mode": "github:ImagingDataCommons/ohif-gcp-mode#main",
     "axios": "^1.20.0",
     "execa": "8.0.1",
     "onnxruntime-web": "^1.30.0",
