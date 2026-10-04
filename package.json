@@ -67,7 +67,10 @@
   "dependencies": {
     "@idc/gcp-extension": "link:../ohif-gcp-extension",
     "@idc/gcp-mode": "link:../ohif-gcp-mode",
-    "execa": "8.0.1"
+    "axios": "^1.20.0",
+    "execa": "8.0.1",
+    "onnxruntime-web": "^1.30.0",
+    "wasm-feature-detect": "^1.9.0"
   },
   "devDependencies": {
     "@babel/core": "7.29.7",

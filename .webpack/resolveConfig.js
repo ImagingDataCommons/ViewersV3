@@ -26,6 +26,14 @@ const alias = {
   '@hooks': path.resolve(__dirname, '../platform/app/src/hooks'),
   '@routes': path.resolve(__dirname, '../platform/app/src/routes'),
   '@state': path.resolve(__dirname, '../platform/app/src/state'),
+  /**
+   * Explicit alias for onnxruntime-web/webgpu subpath export.
+   * rspack doesn't always resolve package.json exports correctly for subpaths.
+   */
+  'onnxruntime-web/webgpu': path.resolve(
+    __dirname,
+    '../node_modules/onnxruntime-web/dist/ort.webgpu.bundle.min.mjs'
+  ),
 };
 
 // Directories to search when resolving modules. The leading bare 'node_modules'
