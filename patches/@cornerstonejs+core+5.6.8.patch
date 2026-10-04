@@ -1,9 +1,44 @@
 diff --git a/node_modules/@cornerstonejs/core/dist/esm/RenderingEngine/StackViewport.js b/node_modules/@cornerstonejs/core/dist/esm/RenderingEngine/StackViewport.js
-index 1234567..abcdefg 100644
 --- a/node_modules/@cornerstonejs/core/dist/esm/RenderingEngine/StackViewport.js
 +++ b/node_modules/@cornerstonejs/core/dist/esm/RenderingEngine/StackViewport.js
-@@ -1873,9 +1873,10 @@ class StackViewport extends Viewport {
-         return renderingEngine.offscreenMultiRenderWindow?.getRenderer(this.id);
+@@ -1067,13 +1067,14 @@ class StackViewport extends Viewport {
+             wwToUse = ww;
+             wcToUse = wc;
+         }
+-        viewport.voi = {
++        const validVoiLUTFunction = this._getValidVOILUTFunction(image.voiLUTFunction);
++            viewport.voi = {
+                 windowWidth: wwToUse,
+                 windowCenter: wcToUse,
+-                voiLUTFunction: image.voiLUTFunction,
++                voiLUTFunction: validVoiLUTFunction,
+             };
+-            const { lower, upper } = getVOIRangeFromWindowLevel(wwToUse, wcToUse, image.voiLUTFunction);
++            const { lower, upper } = getVOIRangeFromWindowLevel(wwToUse, wcToUse, validVoiLUTFunction);
+             voiRange = { lower, upper };
+         }
+         else {
+@@ -1595,7 +1596,7 @@ class StackViewport extends Viewport {
+     _updateToDisplayImageCPU(image) {
+         const metadata = this.getImageDataMetadata(image);
+         const viewport = getDefaultViewport(this.canvas, image, this.modality, this._cpuFallbackEnabledElement.viewport.colormap);
+         const { windowCenter, windowWidth, voiLUTFunction } = viewport.voi;
+-        this.voiRange = getVOIRangeFromWindowLevel(windowWidth, windowCenter, voiLUTFunction);
++        this.voiRange = getVOIRangeFromWindowLevel(windowWidth, windowCenter, this._getValidVOILUTFunction(voiLUTFunction));
+         this._cpuFallbackEnabledElement.image = image;
+         this._cpuFallbackEnabledElement.metadata = {
+             ...metadata,
+@@ -1705,7 +1706,7 @@ class StackViewport extends Viewport {
+             return this.voiRange;
+         }
+         const { windowCenter, windowWidth, voiLUTFunction } = image;
+-        let voiRange = getVOIRangeFromWindowLevel(windowWidth, windowCenter, voiLUTFunction);
++        let voiRange = getVOIRangeFromWindowLevel(windowWidth, windowCenter, this._getValidVOILUTFunction(voiLUTFunction));
+         voiRange = this._getPTPreScaledRange() || voiRange;
+         return voiRange;
+     }
+@@ -1874,8 +1875,9 @@ class StackViewport extends Viewport {
+         return this._shouldUseMultiTargetFrameRendering();
      }
      _getVOIRangeForCurrentImage() {
 -        const { windowCenter, windowWidth, voiLUTFunction } = this.csImage;
