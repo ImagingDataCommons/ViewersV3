@@ -2,11 +2,11 @@
  * Playwright global setup (wired via `globalSetup` in playwright.config.ts).
  *
  * Before the test suite runs, open the viewer once against a known study to
- * "warm up" the dev server: trigger the first (slow) lazy webpack compilation,
- * prime the browser/codec caches, and fetch the study metadata. Without this,
- * the first real spec frequently times out waiting on a cold server compile.
- * This run only loads the page and waits for a viewport pane to render; it makes
- * no assertions.
+ * "warm up" the dev/preview server: trigger the first (slow) Rspack lazy
+ * compilation, prime the browser/codec caches, and fetch the study metadata.
+ * Without this, the first real spec frequently times out waiting on a cold
+ * server compile. This run only loads the page and waits for the layout to
+ * render; it makes no assertions.
  */
 import { chromium, type FullConfig } from '@playwright/test';
 
@@ -26,10 +26,7 @@ export default async function globalSetup(config: FullConfig) {
     page.setDefaultTimeout(warmupTimeout);
     await page.goto(warmupURL, { waitUntil: 'domcontentloaded', timeout: warmupTimeout });
     await page.waitForLoadState('networkidle', { timeout: warmupTimeout }).catch(() => {});
-    await page
-      .locator('[data-cy="viewport-pane"]')
-      .first()
-      .waitFor({ state: 'visible', timeout: warmupTimeout });
+    await page.locator('[data-cy="Layout"]').waitFor({ state: 'visible', timeout: warmupTimeout });
   } finally {
     await browser.close();
   }

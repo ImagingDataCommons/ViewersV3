@@ -44,7 +44,7 @@ function processResults(qidoStudies) {
 
   const studies = [];
 
-  qidoStudies.forEach(qidoStudy =>
+  qidoStudies.forEach(qidoStudy => {
     studies.push({
       studyInstanceUid: getString(qidoStudy['0020000D']),
       date: getString(qidoStudy['00080020']), // YYYYMMDD
@@ -52,11 +52,13 @@ function processResults(qidoStudies) {
       accession: getString(qidoStudy['00080050']) || '', // short string, probably a number?
       mrn: getString(qidoStudy['00100020']) || '', // medicalRecordNumber
       patientName: utils.formatPN(getName(qidoStudy['00100010'])) || '',
+      patientBirthDate: getString(qidoStudy['00100030']) || '', // YYYYMMDD
       instances: Number(getString(qidoStudy['00201208'])) || 0, // number
       description: getString(qidoStudy['00081030']) || '',
       modalities: getString(getModalities(qidoStudy['00080060'], qidoStudy['00080061'])) || '',
-    })
-  );
+      referringPhysicianName: utils.formatPN(getName(qidoStudy['00080090'])) || '', // Referring Physician's Name
+    });
+  });
 
   return studies;
 }
@@ -151,6 +153,9 @@ function mapParams(params, options = {}) {
   const commaSeparatedFields = [
     '00081030', // Study Description
     '00080060', // Modality
+    '00080061', // ModalitiesInStudy
+    '00080090', // Referring Physician's Name
+    '00100030', // Patient's Birth Date
     // Add more fields here if you want them in the result
   ].join(',');
 
@@ -173,7 +178,7 @@ function mapParams(params, options = {}) {
     limit: params.limit || 101,
     offset: params.offset || 0,
     fuzzymatching: options.supportsFuzzyMatching === true,
-    includefield: commaSeparatedFields, // serverSupportsQIDOIncludeField ? commaSeparatedFields : 'all',
+    includefield: commaSeparatedFields,
   };
 
   // build the StudyDate range parameter
