@@ -46,8 +46,8 @@
     "ci:generateSuccessVersion": "node -p -e \"require('./package.json').version\" > success_version.txt"
   },
   "dependencies": {
-    "@idc/gcp-extension": "file:../../../ohif-gcp-extension",
-    "@idc/gcp-mode": "file:../../../ohif-gcp-mode",
+    "@idc/gcp-extension": "github:ImagingDataCommons/ohif-gcp-extension#main",
+    "@idc/gcp-mode": "github:ImagingDataCommons/ohif-gcp-mode#main",
     "@ohif/extension-idc": "0.0.1",
     "@babel/runtime": "7.29.7",
     "@cornerstonejs/codec-charls": "1.2.3",
