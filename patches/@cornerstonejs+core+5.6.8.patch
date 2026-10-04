@@ -1,0 +1,16 @@
+diff --git a/node_modules/@cornerstonejs/core/dist/esm/RenderingEngine/StackViewport.js b/node_modules/@cornerstonejs/core/dist/esm/RenderingEngine/StackViewport.js
+index 1234567..abcdefg 100644
+--- a/node_modules/@cornerstonejs/core/dist/esm/RenderingEngine/StackViewport.js
++++ b/node_modules/@cornerstonejs/core/dist/esm/RenderingEngine/StackViewport.js
+@@ -1873,9 +1873,10 @@ class StackViewport extends Viewport {
+         return renderingEngine.offscreenMultiRenderWindow?.getRenderer(this.id);
+     }
+     _getVOIRangeForCurrentImage() {
+-        const { windowCenter, windowWidth, voiLUTFunction } = this.csImage;
+-        return getVOIRangeFromWindowLevel(windowWidth, windowCenter, voiLUTFunction);
++        const { windowCenter, windowWidth, voiLUTFunction } = this.csImage || {};
++        const validVOILUTFunction = this._getValidVOILUTFunction(voiLUTFunction);
++        return getVOIRangeFromWindowLevel(windowWidth, windowCenter, validVOILUTFunction);
+     }
+     _getValidVOILUTFunction(voiLUTFunction) {
+         if (!Object.values(VOILUTFunctionType).includes(voiLUTFunction)) {
