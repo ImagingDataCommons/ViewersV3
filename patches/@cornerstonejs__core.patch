@@ -1,7 +1,8 @@
-diff --git a/node_modules/@cornerstonejs/core/dist/esm/utilities/windowLevel.js b/node_modules/@cornerstonejs/core/dist/esm/utilities/windowLevel.js
---- a/node_modules/@cornerstonejs/core/dist/esm/utilities/windowLevel.js
-+++ b/node_modules/@cornerstonejs/core/dist/esm/utilities/windowLevel.js
-@@ -1,25 +1,50 @@
+diff --git a/dist/esm/utilities/windowLevel.js b/dist/esm/utilities/windowLevel.js
+index ce9cce60297b3429f714c4424187de305f9ea9fa..35c6b7f5e76b9f02dad17579d6664b0936adeadd 100644
+--- a/dist/esm/utilities/windowLevel.js
++++ b/dist/esm/utilities/windowLevel.js
+@@ -1,26 +1,54 @@
  import VOILUTFunctionType from '../enums/VOILUTFunctionType.js';
  import { logit } from './logit.js';
 +
