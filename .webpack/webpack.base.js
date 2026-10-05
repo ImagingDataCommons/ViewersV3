@@ -104,6 +104,9 @@ module.exports = (env, argv, { SRC_DIR, ENTRY }) => {
       warnings: true,
     },
     cache: isProdBuild ? false : { type: 'filesystem' },
+    experiments: {
+      newCache: !isProdBuild,
+    },
     module: {
       noParse: [/(dicomicc)/],
       rules: [
