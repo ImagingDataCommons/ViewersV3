@@ -117,11 +117,10 @@ window.config = {
   showErrorDetails: 'always',
 
   /**
-   * Default data source - uses merge to combine IDC + GCP.
-   * When no ?gcp= param, only IDC data is shown.
-   * When ?gcp= param is present, both sources are merged.
+   * Default data source - uses IDC DICOMWeb directly.
+   * When ?gcp= param is present, the GCP extension activates the merge data source.
    */
-  defaultDataSourceName: 'idc-merge',
+  defaultDataSourceName: 'idc-dicomweb',
 
   dataSources: [
     /**
