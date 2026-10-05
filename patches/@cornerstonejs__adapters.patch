@@ -1,0 +1,28 @@
+diff --git a/dist/esm/adapters/helpers/checkOrientation.js b/dist/esm/adapters/helpers/checkOrientation.js
+index f147ce19972dfe2f30ed820509943bb2ab2f34d0..47868b5ae063ee61e4061aa46ef5ccf49692fb34 100644
+--- a/dist/esm/adapters/helpers/checkOrientation.js
++++ b/dist/esm/adapters/helpers/checkOrientation.js
+@@ -4,9 +4,20 @@ import { utilities } from '@cornerstonejs/core';
+ function checkOrientation(multiframe, validOrientations, sourceDataDimensions, tolerance) {
+   const SharedFunctionalGroupsSequence = multiframe.SharedFunctionalGroupsSequence,
+     PerFrameFunctionalGroupsSequence = multiframe.PerFrameFunctionalGroupsSequence;
+-  const sharedImageOrientationPatient = SharedFunctionalGroupsSequence.PlaneOrientationSequence ? SharedFunctionalGroupsSequence.PlaneOrientationSequence.ImageOrientationPatient : undefined;
+-  const PerFrameFunctionalGroups = PerFrameFunctionalGroupsSequence[0];
+-  const iopRaw = sharedImageOrientationPatient || PerFrameFunctionalGroups.PlaneOrientationSequence.ImageOrientationPatient;
++  const sharedImageOrientationPatient = SharedFunctionalGroupsSequence?.PlaneOrientationSequence ? SharedFunctionalGroupsSequence.PlaneOrientationSequence.ImageOrientationPatient : undefined;
++
++  /** Get orientation from per-frame if shared doesn't have it and per-frame exists */
++  let iopRaw = sharedImageOrientationPatient;
++  if (!iopRaw && PerFrameFunctionalGroupsSequence && PerFrameFunctionalGroupsSequence.length > 0) {
++    const PerFrameFunctionalGroups = PerFrameFunctionalGroupsSequence[0];
++    iopRaw = PerFrameFunctionalGroups?.PlaneOrientationSequence?.ImageOrientationPatient;
++  }
++
++  if (!iopRaw) {
++    /** No orientation found, default to Planar to avoid throwing */
++    return 'Planar';
++  }
++
+   const iop = Array.isArray(iopRaw) ? iopRaw.map(Number) : iopRaw;
+   const inPlane = validOrientations.some(operation => utilities.isEqual(iop, operation, tolerance));
+   if (inPlane) {
