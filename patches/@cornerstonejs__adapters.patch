@@ -26,7 +26,17 @@ index db4972221ea40cd1eaad450e9a6334c8eef4ef72..120316e2ac6929810b1da4b5cc4cfb08
          const ImageOrientationPatientI = sharedImageOrientationPatient || (PerFrameFunctionalGroups === null || PerFrameFunctionalGroups === void 0 || (_PerFrameFunctionalGr = PerFrameFunctionalGroups.PlaneOrientationSequence) === null || _PerFrameFunctionalGr === void 0 ? void 0 : _PerFrameFunctionalGr.ImageOrientationPatient);
          if (!ImageOrientationPatientI) {
            throw new Error("SEG frame ".concat(i + 1, " is missing ImageOrientationPatient in per-frame and shared functional groups."));
-@@ -817,7 +818,7 @@ function insertOverlappingPixelDataPlanar(_ref12) {
+@@ -576,7 +577,8 @@ function insertPixelDataPlanar(_ref0) {
+         }
+         const segmentIndex = getSegmentIndex(multiframe, i);
+         if (segmentIndex === undefined) {
+-          throw new Error('Could not retrieve the segment index. Aborting segmentation loading.');
++          console.warn('Could not retrieve the segment index for frame ' + i + ', skipping this frame.');
++          continue;
+         }
+         if (!segmentsPixelIndices.has(segmentIndex)) {
+           segmentsPixelIndices.set(segmentIndex, {});
+@@ -817,7 +819,7 @@ function insertOverlappingPixelDataPlanar(_ref12) {
      PerFrameFunctionalGroupsSequence = multiframe.PerFrameFunctionalGroupsSequence,
      Rows = multiframe.Rows,
      Columns = multiframe.Columns;
@@ -35,7 +45,7 @@ index db4972221ea40cd1eaad450e9a6334c8eef4ef72..120316e2ac6929810b1da4b5cc4cfb08
    const sliceLength = Columns * Rows;
    const arrayOfSegmentData = getArrayOfSegmentData({
      sliceLength,
-@@ -910,7 +911,7 @@ const getSegmentData = _ref14 => {
+@@ -910,7 +912,7 @@ const getSegmentData = _ref14 => {
    for (let currentLabelMapImageIndex = 0; currentLabelMapImageIndex < labelMapImages.length; currentLabelMapImageIndex++) {
      const currentLabelMapImage = labelMapImages[currentLabelMapImageIndex];
      const referencedImageId = currentLabelMapImage.referencedImageId;
@@ -44,7 +54,7 @@ index db4972221ea40cd1eaad450e9a6334c8eef4ef72..120316e2ac6929810b1da4b5cc4cfb08
        const _extractInfoFromPerFr = extractInfoFromPerFrameFunctionalGroups({
            PerFrameFunctionalGroups,
            sequenceIndex: currentSequenceIndex,
-@@ -922,10 +923,10 @@ const getSegmentData = _ref14 => {
+@@ -922,10 +924,10 @@ const getSegmentData = _ref14 => {
        const isCorrectPerFrameFunctionalGroup = groupsSegmentIndex === segmentIndex && groupsReferenceImageId === currentLabelMapImage.referencedImageId;
        return isCorrectPerFrameFunctionalGroup;
      });
