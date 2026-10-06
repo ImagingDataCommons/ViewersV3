@@ -1,97 +1,31 @@
-diff --git a/dist/esm/adapters/Cornerstone3D/Segmentation/labelmapImagesFromBuffer.js b/dist/esm/adapters/Cornerstone3D/Segmentation/labelmapImagesFromBuffer.js
-index db4972221ea40cd1eaad450e9a6334c8eef4ef72..120316e2ac6929810b1da4b5cc4cfb083f0f8ce0 100644
---- a/dist/esm/adapters/Cornerstone3D/Segmentation/labelmapImagesFromBuffer.js
-+++ b/dist/esm/adapters/Cornerstone3D/Segmentation/labelmapImagesFromBuffer.js
-@@ -552,10 +552,11 @@ function insertPixelDataPlanar(_ref0) {
-     PerFrameFunctionalGroupsSequence = multiframe.PerFrameFunctionalGroupsSequence,
-     Rows = multiframe.Rows,
-     Columns = multiframe.Columns;
--  const sharedImageOrientationPatient = SharedFunctionalGroupsSequence.PlaneOrientationSequence ? SharedFunctionalGroupsSequence.PlaneOrientationSequence.ImageOrientationPatient : undefined;
-+  const sharedImageOrientationPatient = SharedFunctionalGroupsSequence?.PlaneOrientationSequence ? SharedFunctionalGroupsSequence.PlaneOrientationSequence.ImageOrientationPatient : undefined;
-   const sliceLength = Columns * Rows;
--  const metadataFrameCount = Number(multiframe.NumberOfFrames) || PerFrameFunctionalGroupsSequence.length;
--  const groupsLenFromMetadata = PerFrameFunctionalGroupsSequence.length || metadataFrameCount;
-+  const perFrameLength = PerFrameFunctionalGroupsSequence?.length || 0;
-+  const metadataFrameCount = Number(multiframe.NumberOfFrames) || perFrameLength;
-+  const groupsLenFromMetadata = perFrameLength || metadataFrameCount;
-   const groupsLen = typeof decodedFrameCount === 'number' ? Math.min(groupsLenFromMetadata, decodedFrameCount) : groupsLenFromMetadata;
-   let overlapping = false;
-   return new Promise(resolve => {
-@@ -564,7 +565,7 @@ function insertPixelDataPlanar(_ref0) {
-     const processChunk = firstIndex => {
-       for (let i = firstIndex; i < firstIndex + imagesPerChunk && i < groupsLen; i++) {
-         var _PerFrameFunctionalGr;
--        const PerFrameFunctionalGroups = PerFrameFunctionalGroupsSequence[i];
-+        const PerFrameFunctionalGroups = PerFrameFunctionalGroupsSequence?.[i];
-         const ImageOrientationPatientI = sharedImageOrientationPatient || (PerFrameFunctionalGroups === null || PerFrameFunctionalGroups === void 0 || (_PerFrameFunctionalGr = PerFrameFunctionalGroups.PlaneOrientationSequence) === null || _PerFrameFunctionalGr === void 0 ? void 0 : _PerFrameFunctionalGr.ImageOrientationPatient);
-         if (!ImageOrientationPatientI) {
-           throw new Error("SEG frame ".concat(i + 1, " is missing ImageOrientationPatient in per-frame and shared functional groups."));
-@@ -576,7 +577,8 @@ function insertPixelDataPlanar(_ref0) {
-         }
-         const segmentIndex = getSegmentIndex(multiframe, i);
-         if (segmentIndex === undefined) {
--          throw new Error('Could not retrieve the segment index. Aborting segmentation loading.');
-+          console.warn('Could not retrieve the segment index for frame ' + i + ', skipping this frame.');
-+          continue;
-         }
-         if (!segmentsPixelIndices.has(segmentIndex)) {
-           segmentsPixelIndices.set(segmentIndex, {});
-@@ -817,7 +819,7 @@ function insertOverlappingPixelDataPlanar(_ref12) {
-     PerFrameFunctionalGroupsSequence = multiframe.PerFrameFunctionalGroupsSequence,
-     Rows = multiframe.Rows,
-     Columns = multiframe.Columns;
--  const sharedImageOrientationPatient = SharedFunctionalGroupsSequence.PlaneOrientationSequence ? SharedFunctionalGroupsSequence.PlaneOrientationSequence.ImageOrientationPatient : undefined;
-+  const sharedImageOrientationPatient = SharedFunctionalGroupsSequence?.PlaneOrientationSequence ? SharedFunctionalGroupsSequence.PlaneOrientationSequence.ImageOrientationPatient : undefined;
-   const sliceLength = Columns * Rows;
-   const arrayOfSegmentData = getArrayOfSegmentData({
-     sliceLength,
-@@ -910,7 +912,7 @@ const getSegmentData = _ref14 => {
-   for (let currentLabelMapImageIndex = 0; currentLabelMapImageIndex < labelMapImages.length; currentLabelMapImageIndex++) {
-     const currentLabelMapImage = labelMapImages[currentLabelMapImageIndex];
-     const referencedImageId = currentLabelMapImage.referencedImageId;
--    const PerFrameFunctionalGroupsIndex = PerFrameFunctionalGroupsSequence.findIndex((PerFrameFunctionalGroups, currentSequenceIndex) => {
-+    const PerFrameFunctionalGroupsIndex = PerFrameFunctionalGroupsSequence?.findIndex((PerFrameFunctionalGroups, currentSequenceIndex) => {
-       const _extractInfoFromPerFr = extractInfoFromPerFrameFunctionalGroups({
-           PerFrameFunctionalGroups,
-           sequenceIndex: currentSequenceIndex,
-@@ -922,10 +924,10 @@ const getSegmentData = _ref14 => {
-       const isCorrectPerFrameFunctionalGroup = groupsSegmentIndex === segmentIndex && groupsReferenceImageId === currentLabelMapImage.referencedImageId;
-       return isCorrectPerFrameFunctionalGroup;
-     });
--    if (PerFrameFunctionalGroupsIndex === -1) {
-+    if (PerFrameFunctionalGroupsIndex === -1 || PerFrameFunctionalGroupsIndex === undefined) {
-       continue;
-     }
--    const PerFrameFunctionalGroups = PerFrameFunctionalGroupsSequence[PerFrameFunctionalGroupsIndex];
-+    const PerFrameFunctionalGroups = PerFrameFunctionalGroupsSequence?.[PerFrameFunctionalGroupsIndex];
-     const alignedPixelDataI = getAlignedPixelData({
-       sharedImageOrientationPatient,
-       PerFrameFunctionalGroups,
-diff --git a/dist/esm/adapters/helpers/checkOrientation.js b/dist/esm/adapters/helpers/checkOrientation.js
-index f147ce19972dfe2f30ed820509943bb2ab2f34d0..47868b5ae063ee61e4061aa46ef5ccf49692fb34 100644
---- a/dist/esm/adapters/helpers/checkOrientation.js
-+++ b/dist/esm/adapters/helpers/checkOrientation.js
-@@ -4,9 +4,20 @@ import { utilities } from '@cornerstonejs/core';
- function checkOrientation(multiframe, validOrientations, sourceDataDimensions, tolerance) {
-   const SharedFunctionalGroupsSequence = multiframe.SharedFunctionalGroupsSequence,
-     PerFrameFunctionalGroupsSequence = multiframe.PerFrameFunctionalGroupsSequence;
--  const sharedImageOrientationPatient = SharedFunctionalGroupsSequence.PlaneOrientationSequence ? SharedFunctionalGroupsSequence.PlaneOrientationSequence.ImageOrientationPatient : undefined;
--  const PerFrameFunctionalGroups = PerFrameFunctionalGroupsSequence[0];
--  const iopRaw = sharedImageOrientationPatient || PerFrameFunctionalGroups.PlaneOrientationSequence.ImageOrientationPatient;
-+  const sharedImageOrientationPatient = SharedFunctionalGroupsSequence?.PlaneOrientationSequence ? SharedFunctionalGroupsSequence.PlaneOrientationSequence.ImageOrientationPatient : undefined;
-+
-+  /** Get orientation from per-frame if shared doesn't have it and per-frame exists */
-+  let iopRaw = sharedImageOrientationPatient;
-+  if (!iopRaw && PerFrameFunctionalGroupsSequence && PerFrameFunctionalGroupsSequence.length > 0) {
-+    const PerFrameFunctionalGroups = PerFrameFunctionalGroupsSequence[0];
-+    iopRaw = PerFrameFunctionalGroups?.PlaneOrientationSequence?.ImageOrientationPatient;
-+  }
-+
-+  if (!iopRaw) {
-+    /** No orientation found, default to Planar to avoid throwing */
-+    return 'Planar';
-+  }
-+
-   const iop = Array.isArray(iopRaw) ? iopRaw.map(Number) : iopRaw;
-   const inPlane = validOrientations.some(operation => utilities.isEqual(iop, operation, tolerance));
-   if (inPlane) {
+diff --git a/dist/esm/adapters/Cornerstone/Segmentation_4X.js b/dist/esm/adapters/Cornerstone/Segmentation_4X.js
+index f40a914216e4d403fb6f49a880a1329482b5219f..62bec9ef69359bab5f9bf8a18f9ff6803efb7553 100644
+--- a/dist/esm/adapters/Cornerstone/Segmentation_4X.js
++++ b/dist/esm/adapters/Cornerstone/Segmentation_4X.js
+@@ -1169,12 +1169,20 @@ function alignPixelDataWithSourceData(pixelData2D, iop, orientations, tolerance)
+ }
+ function getSegmentMetadata(multiframe, seriesInstanceUid) {
+   const segmentSequence = multiframe.SegmentSequence;
+-  let data = [];
+-  if (Array.isArray(segmentSequence)) {
+-    data = [undefined, ...segmentSequence];
+-  } else {
+-    // Only one segment, will be stored as an object.
+-    data = [undefined, segmentSequence];
++  const data = [];
++  /**
++   * Index segments by their SegmentNumber rather than array position.
++   * This is required for LABELMAP segmentations where SegmentNumber may
++   * start at 0 (for background) or have gaps. The DICOM standard only
++   * requires SegmentNumber >= 1 for BINARY/FRACTIONAL types, but LABELMAP
++   * allows more flexibility (see DICOM Part 3, Section C.8.20.2.4).
++   * Backported from: https://github.com/cornerstonejs/cornerstone3D/pull/2882
++   */
++  const segments = Array.isArray(segmentSequence) ? segmentSequence : [segmentSequence];
++  for (const segment of segments) {
++    if (segment?.SegmentNumber >= 0) {
++      data[segment.SegmentNumber] = segment;
++    }
+   }
+   return {
+     seriesInstanceUid,

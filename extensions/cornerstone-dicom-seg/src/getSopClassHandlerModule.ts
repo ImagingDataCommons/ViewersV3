@@ -3,6 +3,7 @@ import i18n from '@ohif/i18n';
 import { metaData, eventTarget, utilities as csUtils } from '@cornerstonejs/core';
 import { CONSTANTS, segmentation as cstSegmentation } from '@cornerstonejs/tools';
 import { adaptersSEG, Enums } from '@cornerstonejs/adapters';
+import { dicomLoaderService } from '@ohif/extension-cornerstone';
 
 import { SOPClassHandlerId } from './id';
 import { dicomlabToRGB } from './utils/dicomlabToRGB';
@@ -404,7 +405,8 @@ async function _loadSegments({
   extensionManager,
   servicesManager,
   segDisplaySet,
-}: withAppTypes<{ segDisplaySet: AppTypes.DisplaySet }>) {
+  headers,
+}: withAppTypes<{ segDisplaySet: AppTypes.DisplaySet; headers?: Record<string, string> }>) {
   const { segmentationService, uiNotificationService, customizationService } =
     servicesManager.services;
   const instance = segDisplaySet.instance as Record<string, unknown>;
@@ -495,37 +497,81 @@ async function _loadSegments({
     ) as boolean | undefined) ??
     true;
 
-  let prefetch;
-  if (loadMultiframeAsPart10) {
-    prefetch = dataSource.retrieve?.prefetchInstanceFrames?.({
-      instance,
-      imageId: segImageIdForMetadata,
-    });
-
-    if (prefetch?.done) {
-      await prefetch.done;
-    }
-  }
+  /**
+   * Check if the metadata has PerFrameFunctionalGroupsSequence.
+   * Some DICOMweb servers (like IDC's static WADO) omit this sequence from JSON metadata
+   * for large SEGs to save space. When missing, we need to fetch the full DICOM file
+   * and use the buffer-based loader which parses the complete metadata from the file.
+   */
+  const hasPerFrameFunctionalGroups =
+    Array.isArray(instance.PerFrameFunctionalGroupsSequence) &&
+    instance.PerFrameFunctionalGroupsSequence.length > 0;
 
   let results;
-  try {
-    results = await adaptersSEG.Cornerstone3D.Segmentation.createFromDicomSegImageId(
-      imageIds,
-      segImageIdForMetadata,
-      {
-        metadataProvider: metaData,
-        tolerance,
-        parserType: getSegmentationParserType(
-          segDisplaySet.SOPClassUID,
-          customizationService
-        ),
-        frameImageIds,
-        concurrency: SEG_FRAME_DECODE_CONCURRENCY,
-      }
+  let prefetch;
+
+  if (!hasPerFrameFunctionalGroups) {
+    /**
+     * Fallback: PerFrameFunctionalGroupsSequence is missing from metadata.
+     * Fetch the full DICOM file and use createFromDICOMSegBuffer which parses
+     * the complete metadata directly from the DICOM binary.
+     * This was the loading method used in OHIF 3.12 and earlier.
+     */
+    log.info(
+      SEG_LOAD_LOG_PREFIX,
+      'PerFrameFunctionalGroupsSequence missing from metadata, using buffer-based loader'
     );
-  } finally {
-    eventTarget.removeEventListener(Enums.Events.SEGMENTATION_LOAD_PROGRESS, onProgress);
-    prefetch?.cancel?.();
+
+    try {
+      const arrayBuffer = await dicomLoaderService.findDicomDataPromise(
+        segDisplaySet,
+        null,
+        headers
+      );
+
+      results = await adaptersSEG.Cornerstone3D.Segmentation.createFromDICOMSegBuffer(
+        imageIds,
+        arrayBuffer,
+        { metadataProvider: metaData, tolerance }
+      );
+    } finally {
+      eventTarget.removeEventListener(Enums.Events.SEGMENTATION_LOAD_PROGRESS, onProgress);
+    }
+  } else {
+    /**
+     * Normal path: PerFrameFunctionalGroupsSequence is present in metadata.
+     * Use the imageId-based loader which is more efficient for large SEGs.
+     */
+    if (loadMultiframeAsPart10) {
+      prefetch = dataSource.retrieve?.prefetchInstanceFrames?.({
+        instance,
+        imageId: segImageIdForMetadata,
+      });
+
+      if (prefetch?.done) {
+        await prefetch.done;
+      }
+    }
+
+    try {
+      results = await adaptersSEG.Cornerstone3D.Segmentation.createFromDicomSegImageId(
+        imageIds,
+        segImageIdForMetadata,
+        {
+          metadataProvider: metaData,
+          tolerance,
+          parserType: getSegmentationParserType(
+            segDisplaySet.SOPClassUID,
+            customizationService
+          ),
+          frameImageIds,
+          concurrency: SEG_FRAME_DECODE_CONCURRENCY,
+        }
+      );
+    } finally {
+      eventTarget.removeEventListener(Enums.Events.SEGMENTATION_LOAD_PROGRESS, onProgress);
+      prefetch?.cancel?.();
+    }
   }
 
   let usedRecommendedDisplayCIELabValue = true;

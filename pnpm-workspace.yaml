@@ -3,8 +3,6 @@ packages:
   - extensions/*
   - modes/*
 
-# IDC patches for Cornerstone3D packages are configured at end of file (patchedDependencies)
-# - @cornerstonejs/core: Fix VOI LUT function validation (toLowHighRange throws for unknown values)
 
 # Mirror the cornerstone3D pnpm setup (libs/@cornerstonejs) which is known-good.
 nodeLinker: hoisted
@@ -116,6 +114,10 @@ overrides:
   # browserslist-stats.json).
   'browserslist@<4.28.7': 4.28.8
   'image-size@>=0.6.3 <2.0.4': 2.0.4
+
+# IDC patches for Cornerstone3D packages
+# - @cornerstonejs/core: Fix VOI LUT function validation (PR #2856)
+# - @cornerstonejs/adapters: Index segments by SegmentNumber for LABELMAP support (PR #2882)
 patchedDependencies:
   '@cornerstonejs/adapters': patches/@cornerstonejs__adapters.patch
   '@cornerstonejs/core': patches/@cornerstonejs__core.patch
