@@ -18,7 +18,7 @@ This document tracks the migration status and documents all IDC-specific changes
 | Config Format | ✅ Migrated |
 | GCP Extension | ✅ Updated for OHIF 3.13 |
 | GCP Mode | ✅ Updated for OHIF 3.13 |
-| SEG Loading | ✅ Buffer-based fallback added |
+| SEG Loading | ✅ Buffer-based fallback + PR opened |
 
 ---
 
@@ -30,6 +30,7 @@ This document tracks the migration status and documents all IDC-specific changes
 |----|-------|--------|-------------|
 | [#5987](https://github.com/OHIF/Viewers/pull/5987) | feat(Mode): Add mode selector | 🟡 OPEN | ToolbarModeSelector component for switching modes |
 | [#6331](https://github.com/OHIF/Viewers/pull/6331) | fix(MergeDataSource): improve series-to-datasource routing | 🟡 OPEN | seriesSourceMap + retrieve.series.metadata tagging |
+| [#6333](https://github.com/OHIF/Viewers/pull/6333) | fix(seg): fallback to buffer-based loader when PerFrameFunctionalGroupsSequence is missing | 🟡 OPEN | SEG metadata fallback + bulk data fetch |
 | [#6335](https://github.com/OHIF/Viewers/pull/6335) | feat(cornerstone-dicom-sr): add SRPoint tool | 🟡 OPEN | SRPointTool for DICOM SR point annotations |
 
 ### Cornerstone3D PRs
@@ -58,11 +59,16 @@ Located in `patches/` directory:
 - **What it does:** Fixes segment color mapping for LABELMAP segmentations where SegmentNumber may start at 0 or have gaps
 - **Remove when:** PR #2882 is merged and CS3D version is updated
 
-### checkOrientation Fix (Not a Patch)
+### SEG PerFrameFunctionalGroupsSequence Fallback
 - **Location:** `extensions/cornerstone-dicom-seg/src/getSopClassHandlerModule.ts`
-- **Purpose:** Handle SEG files where PerFrameFunctionalGroupsSequence is missing from metadata
-- **What it does:** Detects missing PerFrameFunctionalGroupsSequence and falls back to `createFromDICOMSegBuffer` (fetches full DICOM file)
+- **Upstream PR:** [OHIF #6333](https://github.com/OHIF/Viewers/pull/6333)
+- **Purpose:** Handle SEG files where PerFrameFunctionalGroupsSequence is missing or available via bulk data
+- **Loading strategy (in order of preference):**
+  1. Inline metadata - If `PerFrameFunctionalGroupsSequence` is present as array → metadata-based loader
+  2. Bulk data - If `PerFrameFunctionalGroupsSequence` has `BulkDataURI` → fetch bulk data, then metadata-based loader
+  3. Full Part 10 - If bulk data unavailable or fails → buffer-based loader (full DICOM file)
 - **Why not a patch:** Implemented in OHIF code, not Cornerstone3D
+- **Remove when:** PR #6333 is merged and fork is synced with upstream
 
 ---
 
@@ -128,11 +134,11 @@ Located in `patches/` directory:
 | `src/utils/measurementServiceMappings/measurementServiceMappingsFactory.ts` | Type mappings |
 
 ### 6. SEG Loading Fallback (`extensions/cornerstone-dicom-seg/`)
-**Status:** IDC-specific (handles IDC's static WADO servers)
+**Status:** PR [#6333](https://github.com/OHIF/Viewers/pull/6333) open
 
 | File | Purpose |
 |------|---------|
-| `src/getSopClassHandlerModule.ts` | PerFrameFunctionalGroupsSequence detection + buffer-based loader fallback |
+| `src/getSopClassHandlerModule.ts` | PerFrameFunctionalGroupsSequence detection + bulk data fetch + buffer-based loader fallback |
 
 ### 7. Platform Core Changes (`platform/core/`)
 **Status:** May need review for upstreaming
@@ -290,15 +296,19 @@ Located in `patches/` directory:
    - Sync fork with upstream
    - Remove IDC-specific MergeDataSource changes
 
-3. **When #6335 (SRPointTool) merges:**
+3. **When #6333 (SEG fallback) merges:**
+   - Sync fork with upstream
+   - Remove IDC-specific SEG loading changes
+
+4. **When #6335 (SRPointTool) merges:**
    - Sync fork with upstream
    - Remove IDC-specific SRPoint files
 
-4. **When CS3D #2856 (VOI LUT) merges:**
+5. **When CS3D #2856 (VOI LUT) merges:**
    - Update Cornerstone3D version
    - Remove `@cornerstonejs__core.patch`
 
-5. **When CS3D #2882 (LABELMAP) merges:**
+6. **When CS3D #2882 (LABELMAP) merges:**
    - Update Cornerstone3D version
    - Remove `@cornerstonejs__adapters.patch`
 
