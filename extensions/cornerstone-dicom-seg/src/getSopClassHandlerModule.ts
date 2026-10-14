@@ -1,15 +1,210 @@
-import { utils, Types as OhifTypes } from '@ohif/core';
+import { utils, Types as OhifTypes, DicomMetadataStore, classes } from '@ohif/core';
 import i18n from '@ohif/i18n';
-import { metaData, eventTarget } from '@cornerstonejs/core';
+import { metaData, eventTarget, utilities as csUtils } from '@cornerstonejs/core';
 import { CONSTANTS, segmentation as cstSegmentation } from '@cornerstonejs/tools';
 import { adaptersSEG, Enums } from '@cornerstonejs/adapters';
+import { dicomLoaderService } from '@ohif/extension-cornerstone';
+import dcmjs from 'dcmjs';
 
 import { SOPClassHandlerId } from './id';
+
+const { DicomMetaDictionary } = dcmjs.data;
+const { naturalizeDataset } = DicomMetaDictionary;
 import { dicomlabToRGB } from './utils/dicomlabToRGB';
+import { getSegmentationParserType } from './utils/segmentationConfig';
+import {
+  getFrameIndexFromImageId,
+  isLocalSchemeImageId,
+  stripFrameFromImageId,
+} from './utils/segLocalImageIds';
 
 const sopClassUids = ['1.2.840.10008.5.1.4.1.1.66.4', '1.2.840.10008.5.1.4.1.1.66.7'];
+const LABELMAP_SEG_SOP_CLASS_UID = '1.2.840.10008.5.1.4.1.1.66.7';
 
 const loadPromises = {};
+
+// Max number of SEG frames fetched/decoded concurrently by the segmentation
+// loader. Hard-coded to 16 for now; intended to become configurable (and to
+// pair with the full-instance prefetch capability) in a follow-up.
+const SEG_FRAME_DECODE_CONCURRENCY = 16;
+
+
+function _normalizeImageId(imageId: string | string[] | undefined): string | undefined {
+  if (imageId == null) {
+    return undefined;
+  }
+  return Array.isArray(imageId) ? imageId[0] : imageId;
+}
+
+/**
+ * Expands a WADO-RS frame imageId (…/frames/1) into one imageId per frame.
+ * Multiframe SEG is stored as separate /frames/N resources on the server.
+ */
+function getFrameImageIds(segImageId: string, numberOfFrames: number): string[] {
+  const frameMatch = segImageId.match(/(.*\/frames\/)(\d+)(.*)$/);
+  if (!frameMatch || numberOfFrames <= 1) {
+    return [segImageId];
+  }
+
+  const prefix = frameMatch[1];
+  const suffix = frameMatch[3] || '';
+  const frameImageIds: string[] = [];
+
+  for (let frameNumber = 1; frameNumber <= numberOfFrames; frameNumber++) {
+    frameImageIds.push(`${prefix}${frameNumber}${suffix}`);
+  }
+
+  return frameImageIds;
+}
+
+function _getSegNumberOfFrames(instance: Record<string, unknown>): number {
+  const fromTag = Number(instance.NumberOfFrames);
+  if (fromTag > 0) {
+    return fromTag;
+  }
+
+  const perFrame = instance.PerFrameFunctionalGroupsSequence;
+  if (Array.isArray(perFrame) && perFrame.length > 0) {
+    return perFrame.length;
+  }
+
+  return 1;
+}
+
+function _ensureSegImageIdMetadataRegistered(
+  imageId: string | undefined,
+  instance: Record<string, unknown>
+): void {
+  if (!imageId) {
+    return;
+  }
+
+  const metadataProvider = classes.MetadataProvider;
+
+  const StudyInstanceUID = instance.StudyInstanceUID as string | undefined;
+  const SeriesInstanceUID = instance.SeriesInstanceUID as string | undefined;
+  const SOPInstanceUID = (instance.SOPInstanceUID || instance.SopInstanceUID) as
+    | string
+    | undefined;
+
+  if (!StudyInstanceUID || !SeriesInstanceUID || !SOPInstanceUID) {
+    return;
+  }
+
+  metadataProvider.addImageIdToUIDs(imageId, {
+    StudyInstanceUID,
+    SeriesInstanceUID,
+    SOPInstanceUID,
+    frameNumber: getFrameIndexFromImageId(imageId),
+  });
+}
+
+/** Ensures metadataProvider.get('instance', imageId) resolves for frame-qualified local SEG ids. */
+function _ensureSegInstanceMetadataAvailable(
+  imageId: string | undefined,
+  instance: Record<string, unknown>
+): void {
+  if (!imageId) {
+    return;
+  }
+
+  _ensureSegImageIdMetadataRegistered(imageId, instance);
+
+  if (metaData.get('instance', imageId)) {
+    return;
+  }
+
+  const StudyInstanceUID = instance.StudyInstanceUID as string | undefined;
+  const SeriesInstanceUID = instance.SeriesInstanceUID as string | undefined;
+  const SOPInstanceUID = (instance.SOPInstanceUID || instance.SopInstanceUID) as
+    | string
+    | undefined;
+
+  const storedInstance =
+    StudyInstanceUID && SeriesInstanceUID && SOPInstanceUID
+      ? DicomMetadataStore.getInstance(StudyInstanceUID, SeriesInstanceUID, SOPInstanceUID)
+      : undefined;
+
+  classes.MetadataProvider.addCustomMetadata(
+    imageId,
+    'instance',
+    storedInstance || instance
+  );
+}
+
+function _getSegDataSource(extensionManager, instance: Record<string, unknown>) {
+  const StudyInstanceUID = instance.StudyInstanceUID as string | undefined;
+  const SeriesInstanceUID = instance.SeriesInstanceUID as string | undefined;
+  const SOPInstanceUID = (instance.SOPInstanceUID || instance.SopInstanceUID) as
+    | string
+    | undefined;
+
+  let localUrl: string | undefined;
+
+  if (StudyInstanceUID && SeriesInstanceUID && SOPInstanceUID) {
+    const storedInstance = DicomMetadataStore.getInstance(
+      StudyInstanceUID,
+      SeriesInstanceUID,
+      SOPInstanceUID
+    );
+    localUrl = storedInstance?.url as string | undefined;
+  }
+
+  localUrl = localUrl || (instance.url as string | undefined);
+
+  if (localUrl && isLocalSchemeImageId(localUrl)) {
+    const dicomLocal = extensionManager.getDataSources('dicomlocal');
+
+    if (dicomLocal?.[0]) {
+      return dicomLocal[0];
+    }
+  }
+
+  return extensionManager.getActiveDataSource()[0];
+}
+
+function _getSegImageIdFromInstance(
+  instance: Record<string, unknown>,
+  dataSource: { getImageIdsForInstance?: (args: { instance: unknown; frame?: number }) => unknown }
+): string | undefined {
+  const numberOfFrames = _getSegNumberOfFrames(instance);
+  const frame = numberOfFrames > 1 ? 1 : undefined;
+
+  return _normalizeImageId(
+    dataSource.getImageIdsForInstance?.({ instance, frame }) as string | string[] | undefined
+  );
+}
+
+function _resolveFrameImageIds(
+  segImageIdStr: string,
+  instance: Record<string, unknown>,
+  dataSource: { getImageIdsForInstance?: (args: { instance: unknown; frame?: number }) => unknown }
+): string[] {
+  const numberOfFrames = _getSegNumberOfFrames(instance);
+  const fromFrameUrl = getFrameImageIds(segImageIdStr, numberOfFrames);
+
+  if (fromFrameUrl.length > 1) {
+    return fromFrameUrl;
+  }
+
+  if (numberOfFrames <= 1) {
+    return [segImageIdStr];
+  }
+
+  const frameImageIds: string[] = [];
+
+  for (let frame = 1; frame <= numberOfFrames; frame++) {
+    const frameImageId = _normalizeImageId(
+      dataSource.getImageIdsForInstance?.({ instance, frame }) as string | string[] | undefined
+    );
+
+    if (frameImageId) {
+      frameImageIds.push(frameImageId);
+    }
+  }
+
+  return frameImageIds.length ? frameImageIds : [segImageIdStr];
+}
 
 function _getDisplaySetsFromSeries(
   instances,
@@ -30,6 +225,7 @@ function _getDisplaySetsFromSeries(
     SeriesDate,
     StructureSetDate,
     SOPClassUID,
+    FrameOfReferenceUID,
     wadoRoot,
     wadoUri,
     wadoUriRoot,
@@ -49,6 +245,7 @@ function _getDisplaySetsFromSeries(
     StudyInstanceUID,
     SOPClassHandlerId,
     SOPClassUID,
+    FrameOfReferenceUID,
     referencedImages: null,
     referencedSeriesInstanceUID: null,
     referencedDisplaySetInstanceUID: null,
@@ -104,6 +301,7 @@ function _getDisplaySetsFromSeries(
         if (addedDisplaySet.SeriesInstanceUID === displaySet.referencedSeriesInstanceUID) {
           displaySet.referencedDisplaySetInstanceUID = addedDisplaySet.displaySetInstanceUID;
           displaySet.isReconstructable = addedDisplaySet.isReconstructable;
+          displaySet.FrameOfReferenceUID = addedDisplaySet.FrameOfReferenceUID;
           unsubscribe();
         }
       }
@@ -111,6 +309,7 @@ function _getDisplaySetsFromSeries(
   } else {
     displaySet.referencedDisplaySetInstanceUID = referencedDisplaySet.displaySetInstanceUID;
     displaySet.isReconstructable = referencedDisplaySet.isReconstructable;
+    displaySet.FrameOfReferenceUID = referencedDisplaySet.FrameOfReferenceUID;
   }
 
   displaySet.load = async ({ headers }) =>
@@ -167,6 +366,11 @@ function _load(
       });
   });
 
+  // Expose the in-flight load promise so observers (e.g. the viewport service
+  // waiting to attach the representation) can react to a load failure without
+  // re-invoking load().
+  segDisplaySet.loadingPromise = loadPromises[SOPInstanceUID];
+
   return loadPromises[SOPInstanceUID];
 }
 
@@ -175,15 +379,18 @@ async function _loadSegments({
   servicesManager,
   segDisplaySet,
   headers,
-}: withAppTypes) {
-  const utilityModule = extensionManager.getModuleEntry(
-    '@ohif/extension-cornerstone.utilityModule.common'
-  );
+}: withAppTypes<{ segDisplaySet: AppTypes.DisplaySet; headers?: Record<string, string> }>) {
+  const { segmentationService, uiNotificationService, customizationService } =
+    servicesManager.services;
+  const instance = segDisplaySet.instance as Record<string, unknown>;
+  const dataSource = _getSegDataSource(extensionManager, instance);
+  const segImageIdStr = _getSegImageIdFromInstance(instance, dataSource);
 
-  const { segmentationService, uiNotificationService } = servicesManager.services;
-
-  const { dicomLoaderService } = utilityModule.exports;
-  const arrayBuffer = await dicomLoaderService.findDicomDataPromise(segDisplaySet, null, headers);
+  if (!segImageIdStr) {
+    throw new Error(
+      'Could not get imageId for SEG instance (no local wadouri url and getImageIdsForInstance returned nothing).'
+    );
+  }
 
   const referencedDisplaySet = servicesManager.services.displaySetService.getDisplaySetByUID(
     segDisplaySet.referencedDisplaySetInstanceUID
@@ -193,31 +400,200 @@ async function _loadSegments({
     throw new Error('referencedDisplaySet is missing for SEG');
   }
 
+  // Prefer cached stack imageIds (multiframe SEG fix #4890), then data source expansion.
   let { imageIds } = referencedDisplaySet;
 
-  if (!imageIds) {
-    // try images
-    const { images } = referencedDisplaySet;
-    imageIds = images.map(image => image.imageId);
+  if (!imageIds?.length) {
+    imageIds = dataSource.getImageIdsForDisplaySet?.(referencedDisplaySet);
   }
 
-  // Todo: what should be defaults here
+  if (!imageIds?.length) {
+    imageIds = (referencedDisplaySet as { images?: { imageId: string }[] }).images?.map(
+      (img: { imageId: string }) => img.imageId
+    );
+  }
+
+  if (!imageIds?.length) {
+    throw new Error('referencedDisplaySet has no imageIds');
+  }
+
+  (segDisplaySet as AppTypes.DisplaySet & { referencedImageIds?: string[] }).referencedImageIds =
+    imageIds;
+
+  if (!referencedDisplaySet.imageIds?.length) {
+    referencedDisplaySet.imageIds = imageIds;
+  }
+
+  const frameImageIds = _resolveFrameImageIds(
+    segImageIdStr,
+    segDisplaySet.instance as Record<string, unknown>,
+    dataSource
+  );
+
+  const segImageIdForMetadata = isLocalSchemeImageId(segImageIdStr)
+    ? stripFrameFromImageId(segImageIdStr)
+    : segImageIdStr;
+
+  _ensureSegInstanceMetadataAvailable(segImageIdForMetadata, instance);
+  frameImageIds.forEach(id => _ensureSegInstanceMetadataAvailable(id, instance));
+
   const tolerance = 0.001;
-  eventTarget.addEventListener(Enums.Events.SEGMENTATION_LOAD_PROGRESS, evt => {
+  const onProgress = evt => {
     const { percentComplete } = evt.detail;
     segmentationService._broadcastEvent(segmentationService.EVENTS.SEGMENT_LOADING_COMPLETE, {
       percentComplete,
     });
-  });
+  };
+  eventTarget.addEventListener(Enums.Events.SEGMENTATION_LOAD_PROGRESS, onProgress);
 
-  const results = await adaptersSEG.Cornerstone3D.Segmentation.createFromDICOMSegBuffer(
-    imageIds,
-    arrayBuffer,
-    { metadataProvider: metaData, tolerance }
-  );
+  // Fetch the whole SEG instance as a single Part 10 object and register its
+  // per-frame compressed pixels into the Cornerstone3D frame registry, so the
+  // per-frame loads below are served locally instead of one network request
+  // per frame: SEG frames are so small and numerous that one bulk fetch beats
+  // hundreds of tiny requests. Enabled by default; per-frame loading is the
+  // exception (loadMultiframeAsPart10: false in the data source config, or the
+  // cornerstone.segmentation.loadMultiframeAsPart10 customization). The
+  // prefetch is awaited until it completes OR fails — deliberately no timeout:
+  // a failed/unsupported instance fetch resolves quickly and falls back to
+  // per-frame, while a slow large fetch is still the fastest way to all frames.
+  const loadMultiframeAsPart10 =
+    (dataSource?.getConfig?.()?.loadMultiframeAsPart10 as boolean | undefined) ??
+    (customizationService?.getCustomization?.(
+      'cornerstone.segmentation.loadMultiframeAsPart10'
+    ) as boolean | undefined) ??
+    true;
+
+  /**
+   * Some DICOMweb servers (e.g. IDC's static WADO) omit large sequences like
+   * PerFrameFunctionalGroupsSequence from the JSON metadata to save bandwidth.
+   * The metadata-based loader (createFromDicomSegImageId) requires this sequence
+   * to map frames to segments.
+   *
+   * Loading strategy (in order of preference):
+   * 1. If PerFrameFunctionalGroupsSequence is inline (array) → use metadata-based loader
+   * 2. If PerFrameFunctionalGroupsSequence has BulkDataURI → fetch bulk data, then use metadata-based loader
+   * 3. If bulk data fetch fails or no BulkDataURI → fall back to buffer-based loader (full Part 10 file)
+   */
+  let hasPerFrameFunctionalGroups =
+    Array.isArray(instance.PerFrameFunctionalGroupsSequence) &&
+    instance.PerFrameFunctionalGroupsSequence.length > 0;
+
+  /**
+   * Check if PerFrameFunctionalGroupsSequence is available via bulk data.
+   * Some servers return it as { BulkDataURI: '...' } instead of inline array.
+   */
+  const perFrameValue = instance.PerFrameFunctionalGroupsSequence as
+    | unknown[]
+    | { BulkDataURI?: string; retrieveBulkData?: () => Promise<ArrayBuffer> }
+    | undefined;
+
+  if (
+    !hasPerFrameFunctionalGroups &&
+    perFrameValue &&
+    typeof perFrameValue === 'object' &&
+    !Array.isArray(perFrameValue) &&
+    (perFrameValue.BulkDataURI || typeof perFrameValue.retrieveBulkData === 'function')
+  ) {
+    try {
+      let buffer: ArrayBuffer | undefined;
+
+      if (typeof perFrameValue.retrieveBulkData === 'function') {
+        buffer = await perFrameValue.retrieveBulkData();
+      } else if (perFrameValue.BulkDataURI && dataSource.retrieve?.bulkDataURI) {
+        buffer = await dataSource.retrieve.bulkDataURI({
+          StudyInstanceUID: instance.StudyInstanceUID,
+          BulkDataURI: perFrameValue.BulkDataURI,
+        });
+      }
+
+      if (buffer && buffer.byteLength > 0) {
+        /**
+         * Parse the bulk data as JSON. The server returns the sequence as a JSON array
+         * following the DICOMweb JSON model (denaturalized form).
+         */
+        const jsonText = new TextDecoder().decode(buffer);
+        const denaturalizedSequence = JSON.parse(jsonText);
+
+        if (Array.isArray(denaturalizedSequence) && denaturalizedSequence.length > 0) {
+          /** Naturalize each item in the sequence to match OHIF's internal format */
+          const naturalizedSequence = denaturalizedSequence.map(item => naturalizeDataset(item));
+
+          /** Update the instance metadata with the fetched sequence */
+          instance.PerFrameFunctionalGroupsSequence = naturalizedSequence;
+          hasPerFrameFunctionalGroups = true;
+        }
+      }
+    } catch {
+      /** Bulk data fetch failed; fall back to buffer-based loader */
+    }
+  }
+
+  let results;
+  let prefetch;
+
+  if (!hasPerFrameFunctionalGroups) {
+    /**
+     * Fallback: PerFrameFunctionalGroupsSequence is missing from metadata.
+     * Fetch the full DICOM file and use createFromDICOMSegBuffer which parses
+     * the complete metadata directly from the DICOM binary.
+     */
+    try {
+      const arrayBuffer = await dicomLoaderService.findDicomDataPromise(
+        segDisplaySet,
+        null,
+        headers
+      );
+
+      results = await adaptersSEG.Cornerstone3D.Segmentation.createFromDICOMSegBuffer(
+        imageIds,
+        arrayBuffer,
+        { metadataProvider: metaData, tolerance }
+      );
+    } finally {
+      eventTarget.removeEventListener(Enums.Events.SEGMENTATION_LOAD_PROGRESS, onProgress);
+    }
+  } else {
+    /**
+     * Normal path: PerFrameFunctionalGroupsSequence is present in metadata.
+     * Use the imageId-based loader which is more efficient for large SEGs.
+     */
+    if (loadMultiframeAsPart10) {
+      prefetch = dataSource.retrieve?.prefetchInstanceFrames?.({
+        instance,
+        imageId: segImageIdForMetadata,
+      });
+
+      if (prefetch?.done) {
+        await prefetch.done;
+      }
+    }
+
+    try {
+      results = await adaptersSEG.Cornerstone3D.Segmentation.createFromDicomSegImageId(
+        imageIds,
+        segImageIdForMetadata,
+        {
+          metadataProvider: metaData,
+          tolerance,
+          parserType: getSegmentationParserType(
+            segDisplaySet.SOPClassUID,
+            customizationService
+          ),
+          frameImageIds,
+          concurrency: SEG_FRAME_DECODE_CONCURRENCY,
+        }
+      );
+    } finally {
+      eventTarget.removeEventListener(Enums.Events.SEGMENTATION_LOAD_PROGRESS, onProgress);
+      prefetch?.cancel?.();
+    }
+  }
 
   let usedRecommendedDisplayCIELabValue = true;
-  results.segMetadata.data.forEach((data, i) => {
+  const resultsTyped = results as {
+    segMetadata: { data: { rgba?: number[]; RecommendedDisplayCIELabValue?: number[] }[] };
+  };
+  resultsTyped.segMetadata.data.forEach((data, i) => {
     if (i > 0) {
       data.rgba = data.RecommendedDisplayCIELabValue;
 
