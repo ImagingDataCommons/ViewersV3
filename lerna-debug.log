@@ -1,0 +1,20 @@
+0 silly argv {
+0 silly argv   _: [ 'run' ],
+0 silly argv   stream: true,
+0 silly argv   lernaVersion: '9.0.4',
+0 silly argv   '$0': '/Users/igoroctaviano/Desktop/ws/idc-ohif/Viewers/node_modules/.bin/lerna',
+0 silly argv   script: 'dev:viewer'
+0 silly argv }
+1 notice cli v9.0.4
+2 verbose packageConfigs Explicit "packages" configuration found in lerna.json. Resolving packages using the configured glob(s): ["extensions/*","platform/*","modes/*","addOns/externals/*"]
+3 verbose rootPath /Users/igoroctaviano/Desktop/ws/idc-ohif/Viewers
+4 error TypeError: (0 , brace_expansion_1.expand) is not a function
+4 error     at braceExpand (/Users/igoroctaviano/Desktop/ws/idc-ohif/Viewers/node_modules/nx/node_modules/minimatch/dist/commonjs/index.js:157:41)
+4 error     at Minimatch.braceExpand (/Users/igoroctaviano/Desktop/ws/idc-ohif/Viewers/node_modules/nx/node_modules/minimatch/dist/commonjs/index.js:898:40)
+4 error     at Minimatch.make (/Users/igoroctaviano/Desktop/ws/idc-ohif/Viewers/node_modules/nx/node_modules/minimatch/dist/commonjs/index.js:268:41)
+4 error     at new Minimatch (/Users/igoroctaviano/Desktop/ws/idc-ohif/Viewers/node_modules/nx/node_modules/minimatch/dist/commonjs/index.js:238:14)
+4 error     at minimatch (/Users/igoroctaviano/Desktop/ws/idc-ohif/Viewers/node_modules/nx/node_modules/minimatch/dist/commonjs/index.js:15:12)
+4 error     at findMatchingConfigFiles (/Users/igoroctaviano/Desktop/ws/idc-ohif/Viewers/node_modules/nx/dist/src/project-graph/utils/project-configuration-utils.js:227:39)
+4 error     at createProjectConfigurationsWithPlugins (/Users/igoroctaviano/Desktop/ws/idc-ohif/Viewers/node_modules/nx/dist/src/project-graph/utils/project-configuration-utils.js:44:37)
+4 error     at retrieveProjectConfigurations (/Users/igoroctaviano/Desktop/ws/idc-ohif/Viewers/node_modules/nx/dist/src/project-graph/utils/retrieve-workspace-files.js:47:85)
+4 error     at process.processTicksAndRejections (node:internal/process/task_queues:104:5)

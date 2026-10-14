@@ -17,16 +17,19 @@
 
 if [ "${CONFIG_ONLY}" != "True" ]; then
   export PUBLIC_URL='/v3/'
-  # Disable all minification
+  # Disable all minification (OHIF 3.13+ uses rspack, check if optimization.minimize exists)
   if [ "${DISABLE_MIN}" == "True" ]; then
-    sed -i -ze 's/return config;/config.optimization.minimize = false;\n  return config;/' .webpack/webpack.base.js
+    # Try to disable minification if the pattern exists in webpack.base.js
+    if grep -q "minimize:" .webpack/webpack.base.js; then
+      sed -i 's/minimize: isProdBuild/minimize: false/' .webpack/webpack.base.js
+    fi
   fi
   # Bump Node memory
   export NODE_OPTIONS="--max-old-space-size=6000"
-  # Same as root `install:frozen`: install exactly from yarn.lock (no resolver drift after dropping bun from CI).
-  yarn install --frozen-lockfile --non-interactive
+  # OHIF 3.13+ uses pnpm instead of yarn
+  pnpm install --frozen-lockfile
   # Run in verbose mode to hopefully catch otherwise silent errors
-  yarn run build --verbose
+  pnpm run build
 else
-  mkdir -p platform/viewer/dist/
+  mkdir -p platform/app/dist/
 fi

@@ -31,20 +31,21 @@ apt-get install -y g++
 
 #
 # Following instructions at https://github.com/nodesource/distributions/blob/master/README.md#deb
+# OHIF 3.13+ requires Node.js 24+
 #
 
-curl -sL https://deb.nodesource.com/setup_20.x | bash -
+curl -sL https://deb.nodesource.com/setup_24.x | bash -
 apt-get install -y nodejs
 
-# Yarn via Corepack — matches package.json "packageManager" (yarn@1.22.22)
-echo "Enabling Corepack and Yarn..."
+# pnpm via Corepack — OHIF 3.13+ uses pnpm instead of yarn
+echo "Enabling Corepack and pnpm..."
 corepack enable
-corepack prepare yarn@1.22.22 --activate
+corepack prepare pnpm@latest --activate
 
 # Verify installations
 echo "Installation complete!"
 echo "Node version: $(node --version)"
-echo "Yarn location: $(which yarn)"
-echo "Yarn version: $(yarn --version)"
+echo "pnpm location: $(which pnpm)"
+echo "pnpm version: $(pnpm --version)"
 
 echo "Libraries Installed"
