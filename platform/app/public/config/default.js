@@ -20,6 +20,34 @@ window.config = {
         'studyBrowser.studyMode': { $set: 'primary' },
         'panelSegmentation.disableEditing': { $set: true },
         'panelMeasurement.disableEditing': { $set: true },
+
+        /**
+         * Remap SR annotation types to SR-specific tools that display finding labels
+         * instead of intensity/stats. Fixes regression in OHIF 3.13 where upstream
+         * removed the Probe → SRPoint and RectangleROI → SRRectangleROI mapping.
+         */
+        'onBeforeSRHydration': {
+          $set: {
+            value: function (params) {
+              var storedMeasurementByAnnotationType = params.storedMeasurementByAnnotationType;
+              var remapped = Object.assign({}, storedMeasurementByAnnotationType);
+
+              /** Probe → SRPoint (shows finding label instead of intensity) */
+              if (remapped.Probe) {
+                remapped.SRPoint = remapped.Probe;
+                delete remapped.Probe;
+              }
+
+              /** RectangleROI → SRRectangleROI (shows finding label instead of stats) */
+              if (remapped.RectangleROI) {
+                remapped.SRRectangleROI = remapped.RectangleROI;
+                delete remapped.RectangleROI;
+              }
+
+              return remapped;
+            },
+          },
+        },
       },
     ],
   },

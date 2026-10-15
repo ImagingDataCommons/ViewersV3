@@ -53,8 +53,20 @@ function getTrackingUniqueIdentifiersForElement(element) {
   return { trackingUniqueIdentifiers: [] };
 }
 
+/**
+ * Clears the tracking unique identifiers for a viewport element.
+ * This effectively hides all SR annotations in that viewport.
+ */
+function clearTrackingUniqueIdentifiersForElement(element) {
+  const enabledElement = getEnabledElement(element);
+  const { viewport } = enabledElement;
+
+  delete state.trackingIdentifiersByViewportId[viewport.id];
+}
+
 export {
   setTrackingUniqueIdentifiersForElement,
   setActiveTrackingUniqueIdentifierForElement,
   getTrackingUniqueIdentifiersForElement,
+  clearTrackingUniqueIdentifiersForElement,
 };

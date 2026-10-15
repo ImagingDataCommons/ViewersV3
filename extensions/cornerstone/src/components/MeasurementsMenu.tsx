@@ -22,6 +22,8 @@ export function MeasumentsMenu(props) {
   const { isSelected, isVisible } = item;
 
   const system = useSystem();
+  const { customizationService } = system.servicesManager.services;
+  const disableEditing = customizationService.getCustomization('panelMeasurement.disableEditing');
 
   const onAction = (event, command, args?) => {
     const uid = items.map(item => item.uid);
@@ -54,28 +56,30 @@ export function MeasumentsMenu(props) {
       >
         {isVisible ? <Icons.Hide className="h-6 w-6" /> : <Icons.Show className="h-6 w-6" />}
       </Button>
-      {/* Actions Dropdown Menu */}
-      <DropdownMenu onOpenChange={open => setIsDropdownOpen(open)}>
-        <DropdownMenuTrigger asChild>
-          <Button
-            size="icon"
-            variant="ghost"
-            className={`h-6 w-6 transition-opacity ${
-              isSelected || isDropdownOpen ? 'opacity-100' : 'opacity-50 group-hover:opacity-100'
-            }`}
-            aria-label="Actions"
-            onClick={e => e.stopPropagation()} // Prevent row selection on button click
-          >
-            <Icons.More className="h-6 w-6" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={e => onAction(e, 'removeMeasurement')}>
-            <Icons.Delete className="text-foreground" />
-            <span className="pl-2">{t('Delete')}</span>
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      {/* Actions Dropdown Menu - hidden when editing is disabled */}
+      {!disableEditing && (
+        <DropdownMenu onOpenChange={open => setIsDropdownOpen(open)}>
+          <DropdownMenuTrigger asChild>
+            <Button
+              size="icon"
+              variant="ghost"
+              className={`h-6 w-6 transition-opacity ${
+                isSelected || isDropdownOpen ? 'opacity-100' : 'opacity-50 group-hover:opacity-100'
+              }`}
+              aria-label="Actions"
+              onClick={e => e.stopPropagation()}
+            >
+              <Icons.More className="h-6 w-6" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={e => onAction(e, 'removeMeasurement')}>
+              <Icons.Delete className="text-foreground" />
+              <span className="pl-2">{t('Delete')}</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
     </div>
   );
 }
