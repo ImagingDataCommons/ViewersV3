@@ -10,6 +10,7 @@ const ThumbnailList = ({
   onThumbnailDoubleClick,
   onClickUntrack,
   activeDisplaySetInstanceUIDs = [],
+  applicableDisplaySetInstanceUIDs = [],
   viewPreset,
   ThumbnailMenuItems,
 }) => {
@@ -40,6 +41,8 @@ const ThumbnailList = ({
               const { displaySetInstanceUID, componentType, numInstances, ...rest } = item;
 
               const isActive = activeDisplaySetInstanceUIDs.includes(displaySetInstanceUID);
+              const isApplicableToActiveViewport =
+                applicableDisplaySetInstanceUIDs.includes(displaySetInstanceUID);
               return (
                 <Thumbnail
                   key={displaySetInstanceUID}
@@ -47,6 +50,7 @@ const ThumbnailList = ({
                   displaySetInstanceUID={displaySetInstanceUID}
                   numInstances={numInstances || 1}
                   isActive={isActive}
+                  isApplicableToActiveViewport={isApplicableToActiveViewport}
                   thumbnailType={componentType}
                   viewPreset="thumbnails"
                   onClick={onThumbnailClick.bind(null, displaySetInstanceUID)}
@@ -67,6 +71,8 @@ const ThumbnailList = ({
             {listItems.map(item => {
               const { displaySetInstanceUID, componentType, numInstances, ...rest } = item;
               const isActive = activeDisplaySetInstanceUIDs.includes(displaySetInstanceUID);
+              const isApplicableToActiveViewport =
+                applicableDisplaySetInstanceUIDs.includes(displaySetInstanceUID);
               return (
                 <Thumbnail
                   key={displaySetInstanceUID}
@@ -74,6 +80,7 @@ const ThumbnailList = ({
                   displaySetInstanceUID={displaySetInstanceUID}
                   numInstances={numInstances || 1}
                   isActive={isActive}
+                  isApplicableToActiveViewport={isApplicableToActiveViewport}
                   thumbnailType={componentType}
                   viewPreset="list"
                   onClick={onThumbnailClick.bind(null, displaySetInstanceUID)}
@@ -102,6 +109,7 @@ ThumbnailList.propTypes = {
       description: PropTypes.string,
       componentType: PropTypes.any,
       isTracked: PropTypes.bool,
+      hasReferencedSeries: PropTypes.bool,
       /**
        * Data the thumbnail should expose to a receiving drop target. Use a matching
        * `dragData.type` to identify which targets can receive this draggable item.
@@ -116,6 +124,7 @@ ThumbnailList.propTypes = {
     })
   ),
   activeDisplaySetInstanceUIDs: PropTypes.arrayOf(PropTypes.string),
+  applicableDisplaySetInstanceUIDs: PropTypes.arrayOf(PropTypes.string),
   onThumbnailClick: PropTypes.func.isRequired,
   onThumbnailDoubleClick: PropTypes.func.isRequired,
   onClickUntrack: PropTypes.func.isRequired,
