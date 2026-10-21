@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useImageViewer } from '@ohif/ui-next';
 import { useSystem, utils } from '@ohif/core';
 import { useNavigate } from 'react-router-dom';
@@ -398,6 +398,13 @@ function PanelStudyBrowser({
 
   const activeDisplaySetInstanceUIDs = viewports.get(activeViewportId)?.displaySetInstanceUIDs;
 
+  /** Derived display sets (SEG, RTSTRUCT, ...) that reference the series shown in the active viewport */
+  const applicableDisplaySetInstanceUIDs = useMemo(
+    () =>
+      _getDisplaySetInstanceUIDsReferencingActive(displaySetService, activeDisplaySetInstanceUIDs),
+    [displaySetService, activeDisplaySetInstanceUIDs, displaySets]
+  );
+
   return (
     <>
       <>
@@ -427,6 +434,7 @@ function PanelStudyBrowser({
         onClickThumbnail={() => {}}
         onDoubleClickThumbnail={onDoubleClickThumbnailHandler}
         activeDisplaySetInstanceUIDs={activeDisplaySetInstanceUIDs}
+        applicableDisplaySetInstanceUIDs={applicableDisplaySetInstanceUIDs}
         showSettings={actionIcons.find(icon => icon.id === 'settings')?.value}
         viewPresets={viewPresets}
         ThumbnailMenuItems={MoreDropdownMenu({
@@ -501,10 +509,43 @@ function _mapDisplaySets(displaySets, displaySetLoadingState, thumbnailImageSrcM
           // .. Any other data to pass
         },
         isHydratedForDerivedDisplaySet: ds.isHydrated,
+        hasReferencedSeries: Boolean(
+          ds.referencedDisplaySetInstanceUID || ds.referencedSeriesInstanceUID
+        ),
       });
     });
 
   return [...thumbnailDisplaySets, ...thumbnailNoImageDisplaySets];
+}
+
+/**
+ * Returns the UIDs of derived display sets (SEG, RTSTRUCT, PMAP, ...) whose
+ * referenced series is displayed in the active viewport. Matches on the
+ * referenced display set UID, falling back to the referenced SeriesInstanceUID
+ * since the display set reference may be resolved after the thumbnail is mapped.
+ */
+function _getDisplaySetInstanceUIDsReferencingActive(
+  displaySetService,
+  activeDisplaySetInstanceUIDs: string[] = []
+): string[] {
+  if (!activeDisplaySetInstanceUIDs.length) {
+    return [];
+  }
+
+  const activeSeriesInstanceUIDs = new Set(
+    activeDisplaySetInstanceUIDs
+      .map(uid => displaySetService.getDisplaySetByUID(uid)?.SeriesInstanceUID)
+      .filter(Boolean)
+  );
+
+  return displaySetService
+    .getActiveDisplaySets()
+    .filter(
+      ds =>
+        activeDisplaySetInstanceUIDs.includes(ds.referencedDisplaySetInstanceUID) ||
+        activeSeriesInstanceUIDs.has(ds.referencedSeriesInstanceUID)
+    )
+    .map(ds => ds.displaySetInstanceUID);
 }
 
 function _getComponentType(ds) {
