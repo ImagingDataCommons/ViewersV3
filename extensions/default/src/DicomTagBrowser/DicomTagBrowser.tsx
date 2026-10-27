@@ -1,6 +1,6 @@
 import dcmjs from 'dcmjs';
 import moment from 'moment';
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { classes, Types } from '@ohif/core';
 import { InputFilter } from '@ohif/ui-next';
 import {
@@ -10,6 +10,9 @@ import {
   SelectContent,
   SelectItem,
   Slider,
+  Switch,
+  Button,
+  Icons,
 } from '@ohif/ui-next';
 
 import DicomTagTable from './DicomTagTable';
@@ -27,6 +30,8 @@ export type Row = {
   children?: string[];
   areChildrenVisible?: boolean;
 };
+
+const searchableRowProperties = ['tag', 'valueRepresentation', 'keyword', 'value'];
 
 let rowCounter = 0;
 const generateRowId = () => `row_${++rowCounter}`;
@@ -47,6 +52,8 @@ const DicomTagBrowser = ({
   const [instanceNumber, setInstanceNumber] = useState(1);
   const [shouldShowInstanceList, setShouldShowInstanceList] = useState(false);
   const [filterValue, setFilterValue] = useState('');
+  const [shouldShowAllRows, setShouldShowAllRows] = useState(false);
+  const [activeMatchIndex, setActiveMatchIndex] = useState(0);
 
   const onSelectChange = value => {
     setSelectedDisplaySetInstanceUID(value.value);
@@ -102,33 +109,50 @@ const DicomTagBrowser = ({
     return rows;
   }, [getMetadata, activeDisplaySet]);
 
+  const matchingRows = useMemo(() => getMatchingRows(rows, filterValue), [rows, filterValue]);
+
   const filteredRows = useMemo(() => {
-    if (!filterValue) {
+    if (!filterValue || shouldShowAllRows) {
       return rows;
     }
 
-    const matchedRowIds = new Set();
+    const matchedRowIds = new Set<string>();
 
-    const propertiesToCheck = ['tag', 'valueRepresentation', 'keyword', 'value'];
+    matchingRows.forEach(row => {
+      matchedRowIds.add(row.uid);
+      [...(row.parents ?? []), ...(row.children ?? [])].forEach(uid => matchedRowIds.add(uid));
+    });
 
-    const setIsMatched = row => {
-      const isDirectMatch = propertiesToCheck.some(propertyName =>
-        row[propertyName]?.toLowerCase().includes(filterValueLowerCase)
-      );
+    return rows.filter(row => matchedRowIds.has(row.uid));
+  }, [rows, filterValue, shouldShowAllRows, matchingRows]);
 
-      if (!isDirectMatch) {
+  useEffect(() => {
+    setActiveMatchIndex(0);
+  }, [matchingRows]);
+
+  const activeRowUid =
+    shouldShowAllRows && matchingRows.length > 0 ? matchingRows[activeMatchIndex]?.uid : undefined;
+
+  const goToMatch = useCallback(
+    (step: number) => {
+      if (!matchingRows.length) {
         return;
       }
+      setActiveMatchIndex(index => (index + step + matchingRows.length) % matchingRows.length);
+    },
+    [matchingRows]
+  );
 
-      matchedRowIds.add(row.uid);
-
-      [...(row.parents ?? []), ...(row.children ?? [])].forEach(uid => matchedRowIds.add(uid));
-    };
-
-    const filterValueLowerCase = filterValue.toLowerCase();
-    rows.forEach(setIsMatched);
-    return rows.filter(row => matchedRowIds.has(row.uid));
-  }, [rows, filterValue]);
+  const onSearchKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLInputElement>) => {
+      if (event.key !== 'Enter' || !shouldShowAllRows) {
+        return;
+      }
+      event.preventDefault();
+      goToMatch(event.shiftKey ? -1 : 1);
+    },
+    [goToMatch, shouldShowAllRows]
+  );
 
   return (
     <div className="dicom-tag-browser-content bg-muted">
@@ -195,16 +219,81 @@ const DicomTagBrowser = ({
               <InputFilter.Input
                 placeholder="Search metadata"
                 className="pl-9 pr-9"
+                onKeyDown={onSearchKeyDown}
+                data-cy="dicom-tag-search-input"
               />
               <InputFilter.ClearButton className="text-primary mr-0.5 p-0.5" />
             </InputFilter>
+            <div className="text-muted-foreground mt-2 flex h-6 flex-row items-center gap-2 text-sm">
+              <Switch
+                id="dicom-tag-show-all-rows"
+                checked={shouldShowAllRows}
+                onCheckedChange={setShouldShowAllRows}
+                data-cy="dicom-tag-show-all-rows-switch"
+              />
+              <label
+                htmlFor="dicom-tag-show-all-rows"
+                className="cursor-pointer select-none"
+              >
+                Show all tags
+              </label>
+              {shouldShowAllRows && filterValue && (
+                <div className="ml-auto flex flex-row items-center gap-1">
+                  <span data-cy="dicom-tag-match-count">
+                    {matchingRows.length
+                      ? `${activeMatchIndex + 1} of ${matchingRows.length}`
+                      : 'No matches'}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Previous match"
+                    disabled={!matchingRows.length}
+                    onClick={() => goToMatch(-1)}
+                    data-cy="dicom-tag-previous-match"
+                  >
+                    <Icons.ChevronLeft className="rotate-90" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Next match"
+                    disabled={!matchingRows.length}
+                    onClick={() => goToMatch(1)}
+                    data-cy="dicom-tag-next-match"
+                  >
+                    <Icons.ChevronDown />
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
-      <DicomTagTable rows={filteredRows} />
+      <DicomTagTable
+        rows={filteredRows}
+        highlightValue={filterValue}
+        activeRowUid={activeRowUid}
+      />
     </div>
   );
 };
+
+/**
+ * Returns the rows that directly match the search value, in display order.
+ */
+function getMatchingRows(rows: Row[], filterValue: string): Row[] {
+  if (!filterValue) {
+    return [];
+  }
+
+  const filterValueLowerCase = filterValue.toLowerCase();
+  return rows.filter(row =>
+    searchableRowProperties.some(propertyName =>
+      row[propertyName]?.toLowerCase().includes(filterValueLowerCase)
+    )
+  );
+}
 
 function getFormattedRowsFromTags({ tags, metadata }) {
   const rows: Row[] = [];
