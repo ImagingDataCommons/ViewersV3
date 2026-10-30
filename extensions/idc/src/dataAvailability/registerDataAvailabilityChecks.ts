@@ -1,11 +1,10 @@
 import i18n from '@ohif/i18n';
-import { utils } from '@ohif/core';
+import { DicomMetadataStore, utils } from '@ohif/core';
 
 import {
   CheckedDataSource,
   StudyAvailability,
   checkStudyAvailability,
-  describeError,
   isReferencedSeriesMissing,
 } from './studyAvailability';
 
@@ -14,12 +13,6 @@ export type DataAvailabilityConfig = {
 };
 
 const DICOMWEB_NAMESPACE = /dataSourcesModule\.dicomweb$/;
-
-/**
- * Google Cloud Healthcare API stores are diagnosed and reported by the GCP
- * extension, which can tell the user why a store could not be read.
- */
-const GCP_HEALTHCARE_HOST = 'healthcare.googleapis.com';
 
 let displaySetsSubscription: { unsubscribe: () => void } | null = null;
 
@@ -31,13 +24,8 @@ const shownToastIds = new Set<string>();
 
 let notificationService: { show: (options) => unknown; hide?: (id: string) => void } | null = null;
 
-/** Persistent toasts get a button to close them; the toaster has no close button. */
-const dismissAction = () => ({ label: i18n.t('DataAvailability:Dismiss'), onClick: () => {} });
-
-function show(options: { id: string } & Record<string, unknown>) {
-  shownToastIds.add(options.id);
-  notificationService?.show(options);
-}
+/** Labels of the derived series that reference each missing series, for one toast per series. */
+const derivedLabelsByMissingSeries = new Map<string, Set<string>>();
 
 /** Reads the study UIDs from the URL the same way the DICOMweb data source does. */
 function getStudyInstanceUIDsFromQuery(): string[] {
@@ -83,61 +71,20 @@ function getDataSourcesToCheck(extensionManager): CheckedDataSource[] {
       if (!DICOMWEB_NAMESPACE.test(definition?.namespace ?? '') || !dataSource?.query?.series) {
         return null;
       }
-      const qidoRoot: string | undefined = dataSource.getConfig?.()?.qidoRoot;
-      if (!qidoRoot) {
+      if (!dataSource.getConfig?.()?.qidoRoot) {
         return null;
       }
       return {
         sourceName,
         label: getDataSourceLabel(sourceName, definition, dataSource),
         dataSource,
-        reportsOwnErrors: qidoRoot.includes(GCP_HEALTHCARE_HOST),
       };
     })
     .filter(Boolean);
 }
 
-/**
- * Notifies about stores that could not be queried. A study missing from one
- * store is not reported: with ?gcp= the study is often only in the user's
- * store, and when no store has it OHIF shows its "study not found" page. GCP
- * stores are left to the GCP extension.
- */
-function notifyFailedSources({ StudyInstanceUID, sources }: StudyAvailability) {
-  sources
-    .filter(source => source.status === 'failed' && !source.reportsOwnErrors)
-    .forEach(source => {
-      console.warn(
-        `[IDC] Could not query ${source.label} for study ${StudyInstanceUID}:`,
-        source.error
-      );
-      show({
-        id: `idc-data-availability-failed-${source.sourceName}-${StudyInstanceUID}`,
-        title: i18n.t('DataAvailability:Data source unavailable'),
-        message: i18n.t(
-          'DataAvailability:Could not query {{source}} for study {{studyInstanceUID}} ({{reason}}).',
-          {
-            source: source.label,
-            studyInstanceUID: StudyInstanceUID,
-            reason: describeError(source.error),
-          }
-        ),
-        type: 'error',
-        duration: Infinity,
-        action: dismissAction(),
-      });
-    });
-}
-
-/** Labels of the derived series that reference each missing series, for one toast per series. */
-const derivedLabelsByMissingSeries = new Map<string, Set<string>>();
-
 function notifyMissingReferencedSeries(displaySet, availabilities: StudyAvailability[]) {
   const { referencedSeriesInstanceUID } = displaySet;
-  if (!isReferencedSeriesMissing(displaySet, availabilities)) {
-    return;
-  }
-
   const sources = availabilities.flatMap(availability => availability.sources);
   const unique = (labels: string[]) => [...new Set(labels)].join(', ');
   const searched = unique(sources.filter(s => s.status !== 'failed').map(s => s.label));
@@ -155,13 +102,15 @@ function notifyMissingReferencedSeries(displaySet, availabilities: StudyAvailabi
     sources: searched,
     unchecked,
   };
+  const id = `idc-data-availability-reference-${referencedSeriesInstanceUID}`;
 
   console.warn(
     `[IDC] ${displaySet.Modality} ${displaySet.SeriesInstanceUID} references series ` +
       `${referencedSeriesInstanceUID}, which was not found in ${searched}`
   );
-  show({
-    id: `idc-data-availability-reference-${referencedSeriesInstanceUID}`,
+  shownToastIds.add(id);
+  notificationService?.show({
+    id,
     title: i18n.t('DataAvailability:Referenced series not found'),
     message: unchecked
       ? i18n.t(
@@ -174,16 +123,20 @@ function notifyMissingReferencedSeries(displaySet, availabilities: StudyAvailabi
         ),
     type: 'warning',
     duration: Infinity,
-    action: dismissAction(),
+    /** The toaster has no close button; its action closes the toast. */
+    action: { label: i18n.t('DataAvailability:Dismiss'), onClick: () => {} },
   });
 }
 
 /**
- * Tells the user when the data they asked for is missing from a store:
- *   1. A data source (other than a GCP store) fails to answer for a study.
- *   2. A SEG, RTSTRUCT or other derived series references a series that none
- *      of the data sources hold for the requested studies, so it has no
- *      images to be displayed over.
+ * Tells the user when a SEG, RTSTRUCT or other derived series references a
+ * series that none of the data sources hold for the requested studies, so it
+ * has no images to be displayed over. With ?gcp= the data sources are the
+ * members of the merge data source.
+ *
+ * Normal loads send no extra requests: a reference is first looked up in the
+ * loaded display sets and in the series lists OHIF already fetched. Only a
+ * reference found in neither makes one series search per study and source.
  *
  * Safe to call on every `onModeEnter`; the previous registration is torn down.
  */
@@ -205,33 +158,42 @@ export function registerDataAvailabilityChecks({
 
   const { displaySetService, uiNotificationService } = servicesManager.services;
   notificationService = uiNotificationService;
-  const dataSources = getDataSourcesToCheck(extensionManager);
   const studyInstanceUIDs = getStudyInstanceUIDsFromQuery();
-  if (!dataSources.length || !studyInstanceUIDs.length) {
+  if (!studyInstanceUIDs.length) {
     return;
   }
 
-  const isCurrent = () => current === generation;
-  const availabilities = Promise.all(
-    studyInstanceUIDs.map(StudyInstanceUID => checkStudyAvailability(StudyInstanceUID, dataSources))
-  );
+  /** A series is known once it is loaded or listed by a source, in any requested study. */
+  const isKnown = (seriesInstanceUID: string) =>
+    displaySetService.getDisplaySetsForSeries(seriesInstanceUID)?.length > 0 ||
+    studyInstanceUIDs.some(StudyInstanceUID =>
+      DicomMetadataStore.getSeries(StudyInstanceUID, seriesInstanceUID)
+    );
 
-  availabilities.then(results => {
-    if (isCurrent()) {
-      results.forEach(notifyFailedSources);
+  let availabilities: Promise<StudyAvailability[]> | null = null;
+  const getAvailabilities = () => {
+    if (!availabilities) {
+      const dataSources = getDataSourcesToCheck(extensionManager);
+      availabilities = Promise.all(
+        studyInstanceUIDs.map(StudyInstanceUID =>
+          checkStudyAvailability(StudyInstanceUID, dataSources)
+        )
+      );
     }
-  });
+    return availabilities;
+  };
 
   const checkDisplaySet = displaySet => {
-    if (!displaySet?.referencedSeriesInstanceUID) {
+    const { referencedSeriesInstanceUID } = displaySet ?? {};
+    if (!referencedSeriesInstanceUID || isKnown(referencedSeriesInstanceUID)) {
       return;
     }
-    availabilities.then(results => {
-      /** A series already loaded, from any study, is not missing. */
-      const loaded = displaySetService.getDisplaySetsForSeries(
-        displaySet.referencedSeriesInstanceUID
-      );
-      if (isCurrent() && !loaded?.length) {
+    getAvailabilities().then(results => {
+      if (
+        current === generation &&
+        !isKnown(referencedSeriesInstanceUID) &&
+        isReferencedSeriesMissing(displaySet, results)
+      ) {
         notifyMissingReferencedSeries(displaySet, results);
       }
     });

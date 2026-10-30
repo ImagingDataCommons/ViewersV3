@@ -3,10 +3,22 @@ import {
   unregisterDataAvailabilityChecks,
 } from './registerDataAvailabilityChecks';
 
+const mockListedSeries = new Set<string>();
+
+jest.mock('@ohif/core', () => ({
+  DicomMetadataStore: {
+    getSeries: (_study: string, series: string) => (mockListedSeries.has(series) ? {} : undefined),
+  },
+  utils: {
+    splitComma: (values: string[]) => values.flatMap(value => value.split(',')).filter(Boolean),
+  },
+}));
+
 jest.mock('@ohif/i18n', () => ({
   __esModule: true,
   default: {
-    t: (key: string, options?: Record<string, string>) => `${key} ${JSON.stringify(options ?? {})}`,
+    t: (key: string, options: Record<string, string> = {}) =>
+      key.replace(/^\w+:/, '').replace(/{{(\w+)}}/g, (_match, name) => options[name] ?? ''),
   },
 }));
 
@@ -15,7 +27,7 @@ const CT = '1.2.3.1';
 
 const flush = () => new Promise(resolve => setTimeout(resolve, 0));
 
-type Search = (uid: string) => Promise<unknown[]>;
+type Search = jest.Mock<Promise<unknown[]>, [string]>;
 
 function setup(sources: Record<string, { qidoRoot: string; search: Search }>) {
   const listeners: Array<(event) => void> = [];
@@ -62,7 +74,8 @@ function setup(sources: Record<string, { qidoRoot: string; search: Search }>) {
 const IDC_ROOT = 'https://proxy.example/dicomWeb';
 const GCP_ROOT =
   'https://healthcare.googleapis.com/v1/projects/p/locations/l/datasets/d/dicomStores/s/dicomWeb';
-const forbidden = () => Promise.reject(Object.assign(new Error('request failed'), { status: 403 }));
+const holding = (...uids: string[]): Search =>
+  jest.fn(() => Promise.resolve(uids.map(seriesInstanceUid => ({ seriesInstanceUid }))));
 const seg = (referencedSeriesInstanceUID: string, SeriesInstanceUID = '9.9') => ({
   StudyInstanceUID: STUDY,
   SeriesInstanceUID,
@@ -73,81 +86,87 @@ const seg = (referencedSeriesInstanceUID: string, SeriesInstanceUID = '9.9') => 
 
 beforeEach(() => {
   window.history.replaceState(null, '', `/viewer?StudyInstanceUIDs=${STUDY}`);
+  mockListedSeries.clear();
   unregisterDataAvailabilityChecks();
 });
 
 describe('registerDataAvailabilityChecks', () => {
-  it('can be turned off', async () => {
-    const { services, register } = setup({ idc: { qidoRoot: IDC_ROOT, search: forbidden } });
+  it('can be turned off', () => {
+    const { services, register } = setup({ idc: { qidoRoot: IDC_ROOT, search: holding() } });
     register({ enabled: false });
+    expect(services.displaySetService.subscribe).not.toHaveBeenCalled();
+  });
+
+  it('sends no request when the referenced series is listed or loaded', async () => {
+    const search = holding();
+    const { services, register, addDisplaySets, loadedSeries } = setup({
+      idc: { qidoRoot: IDC_ROOT, search },
+    });
+    mockListedSeries.add(CT);
+    loadedSeries.add('7.7');
+    register();
+    addDisplaySets(seg(CT), seg('7.7', '9.8'), { SeriesInstanceUID: '5.5', Modality: 'CT' });
     await flush();
+
+    expect(search).not.toHaveBeenCalled();
     expect(services.uiNotificationService.show).not.toHaveBeenCalled();
   });
 
-  it('reports a failed source, but leaves GCP stores to the GCP extension', async () => {
-    const { services, register } = setup({
-      idc: { qidoRoot: IDC_ROOT, search: forbidden },
-      gcp: { qidoRoot: GCP_ROOT, search: forbidden },
-    });
-    register();
-    await flush();
-
-    const shown = services.uiNotificationService.show.mock.calls.map(([options]) => options);
-    expect(shown).toHaveLength(1);
-    expect(shown[0]).toMatchObject({
-      id: `idc-data-availability-failed-idc-${STUDY}`,
-      type: 'error',
-      duration: Infinity,
-    });
-  });
-
-  it('does not warn about a study that is only in the GCP store', async () => {
-    const { services, register } = setup({
-      idc: { qidoRoot: IDC_ROOT, search: () => Promise.resolve([]) },
-      gcp: { qidoRoot: GCP_ROOT, search: () => Promise.resolve([{ seriesInstanceUid: CT }]) },
-    });
-    register();
-    await flush();
-    expect(services.uiNotificationService.show).not.toHaveBeenCalled();
-  });
-
-  it('warns once per missing referenced series, listing every derived series', async () => {
+  it('asks each source once and warns once per missing series, listing every derived series', async () => {
+    const idc = holding('5.5');
+    const gcp = holding('9.1', '9.2');
     const { services, register, addDisplaySets } = setup({
-      idc: { qidoRoot: IDC_ROOT, search: () => Promise.resolve([{ seriesInstanceUid: '5.5' }]) },
+      idc: { qidoRoot: IDC_ROOT, search: idc },
+      gcp: { qidoRoot: GCP_ROOT, search: gcp },
     });
     register();
     addDisplaySets(seg(CT, '9.1'), seg(CT, '9.2'));
     await flush();
 
+    expect(idc).toHaveBeenCalledTimes(1);
+    expect(gcp).toHaveBeenCalledTimes(1);
     const shown = services.uiNotificationService.show.mock.calls.map(([options]) => options);
     expect(new Set(shown.map(options => options.id))).toEqual(
       new Set([`idc-data-availability-reference-${CT}`])
     );
     expect(shown.at(-1).message).toContain('SEG 9.1 (SEG), SEG 9.2 (SEG)');
+    expect(shown.at(-1).message).toContain('GCP DICOM store s');
   });
 
-  it('does not warn when the referenced series is loaded', async () => {
-    const { services, register, addDisplaySets, loadedSeries } = setup({
-      idc: { qidoRoot: IDC_ROOT, search: () => Promise.resolve([{ seriesInstanceUid: '5.5' }]) },
+  it('does not warn when a source holds the series that was not listed yet', async () => {
+    const { services, register, addDisplaySets } = setup({
+      idc: { qidoRoot: IDC_ROOT, search: holding(CT) },
     });
-    loadedSeries.add(CT);
     register();
     addDisplaySets(seg(CT));
     await flush();
     expect(services.uiNotificationService.show).not.toHaveBeenCalled();
   });
 
-  it('drops late results and hides its toasts when the mode exits', async () => {
-    let fail: () => void;
-    const { services, register } = setup({
-      idc: {
-        qidoRoot: IDC_ROOT,
-        search: () => new Promise((_resolve, reject) => (fail = () => reject(new Error('x')))),
-      },
+  it('says which source could not be checked', async () => {
+    const { services, register, addDisplaySets } = setup({
+      idc: { qidoRoot: IDC_ROOT, search: holding('5.5') },
+      gcp: { qidoRoot: GCP_ROOT, search: jest.fn(() => Promise.reject(new Error('403'))) },
     });
     register();
+    addDisplaySets(seg(CT));
+    await flush();
+
+    const [[options]] = services.uiNotificationService.show.mock.calls;
+    expect(options.message).toContain('could not be checked');
+    expect(options.message).toContain('GCP DICOM store s could not be checked');
+  });
+
+  it('drops late results and hides its toasts when the mode exits', async () => {
+    let resolve: (value: unknown[]) => void;
+    const search = jest.fn(() => new Promise<unknown[]>(r => (resolve = r)));
+    const { services, register, addDisplaySets } = setup({
+      idc: { qidoRoot: IDC_ROOT, search },
+    });
+    register();
+    addDisplaySets(seg(CT));
     unregisterDataAvailabilityChecks();
-    fail();
+    resolve([]);
     await flush();
     expect(services.uiNotificationService.show).not.toHaveBeenCalled();
   });

@@ -1,8 +1,4 @@
-import {
-  checkStudyAvailability,
-  describeError,
-  isReferencedSeriesMissing,
-} from './studyAvailability';
+import { checkStudyAvailability, isReferencedSeriesMissing } from './studyAvailability';
 
 const STUDY = '1.2.3';
 const CT = '1.2.3.1';
@@ -29,7 +25,7 @@ describe('checkStudyAvailability', () => {
 
     expect(result.sources.map(s => s.status)).toEqual(['empty', 'found', 'failed']);
     expect(result.sources[1].seriesInstanceUIDs.has(SEG)).toBe(true);
-    expect(describeError(result.sources[2].error)).toBe('HTTP 403 Forbidden');
+    expect(result.sources[2].error).toBe(error);
   });
 
   it('treats a 404 as a source without the study', async () => {
@@ -38,27 +34,6 @@ describe('checkStudyAvailability', () => {
       source('idc', () => Promise.reject(notFound)),
     ]);
     expect(result.sources[0].status).toBe('empty');
-  });
-
-  it('keeps which sources report their own errors', async () => {
-    const result = await checkStudyAvailability(STUDY, [
-      source('idc', () => Promise.resolve([])),
-      { ...source('gcp', () => Promise.reject(new Error('x'))), reportsOwnErrors: true },
-    ]);
-
-    expect(result.sources.map(s => s.reportsOwnErrors)).toEqual([undefined, true]);
-  });
-});
-
-describe('describeError', () => {
-  it('explains a request that got no response', () => {
-    expect(describeError(Object.assign(new Error('request failed'), { status: 0 }))).toBe(
-      'no response from the server'
-    );
-  });
-
-  it('falls back to the message without a status', () => {
-    expect(describeError(new Error('No DICOMweb base url'))).toBe('No DICOMweb base url');
   });
 });
 

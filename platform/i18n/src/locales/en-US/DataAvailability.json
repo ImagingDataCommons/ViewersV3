@@ -1,7 +1,5 @@
 {
   "GCP DICOM store {{store}}": "GCP DICOM store {{store}}",
-  "Data source unavailable": "Data source unavailable",
-  "Could not query {{source}} for study {{studyInstanceUID}} ({{reason}}).": "Could not query {{source}} for study {{studyInstanceUID}} ({{reason}}).",
   "Referenced series not found": "Referenced series not found",
   "{{derived}} references series {{seriesInstanceUID}}, which was not found in {{sources}}. It cannot be displayed over its source images.": "{{derived}} references series {{seriesInstanceUID}}, which was not found in {{sources}}. It cannot be displayed over its source images.",
   "{{derived}} references series {{seriesInstanceUID}}, which was not found in {{sources}}. {{unchecked}} could not be checked and may hold it.": "{{derived}} references series {{seriesInstanceUID}}, which was not found in {{sources}}. {{unchecked}} could not be checked and may hold it.",

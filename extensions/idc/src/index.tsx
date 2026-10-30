@@ -10,22 +10,16 @@ import {
 
 import { id } from './id';
 
-/**
- * The app config, kept from preRegistration. ExtensionManager keeps it private,
- * so it cannot be read from the extension manager later.
- */
-let appConfig: Record<string, any> = {};
-
 const extension = {
   id,
-  preRegistration: ({ appConfig: config }) => {
-    appConfig = config ?? {};
+  preRegistration: () => {
     Icons.addIcon('download', downloadIcon);
   },
   onModeEnter: ({ servicesManager, extensionManager }) => {
     const { toolbarService, UIModalService, viewportGridService, displaySetService } =
       servicesManager.services;
 
+    const appConfig = extensionManager?.appConfig ?? {};
     registerInstanceAnnotations({
       servicesManager,
       config: appConfig.instanceAnnotations,
