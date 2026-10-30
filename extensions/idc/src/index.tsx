@@ -3,6 +3,10 @@ import { Icons } from '@ohif/ui-next';
 import DownloadStudySeriesDialog from './DownloadStudySeriesDialog';
 import { ReactComponent as downloadIcon } from '../assets/icons/download.svg';
 import { registerInstanceAnnotations } from './instanceAnnotations';
+import {
+  registerDataAvailabilityChecks,
+  unregisterDataAvailabilityChecks,
+} from './dataAvailability';
 
 import { id } from './id';
 
@@ -19,6 +23,11 @@ const extension = {
     registerInstanceAnnotations({
       servicesManager,
       config: appConfig.instanceAnnotations,
+    });
+    registerDataAvailabilityChecks({
+      servicesManager,
+      extensionManager,
+      config: appConfig.dataAvailabilityNotifications,
     });
 
     const moreTools = [
@@ -55,6 +64,9 @@ const extension = {
 
     toolbarService.register([...moreTools]);
     toolbarService.updateSection(toolbarService.sections.primary, ['DownloadStudySeries']);
+  },
+  onModeExit: () => {
+    unregisterDataAvailabilityChecks();
   },
 };
 

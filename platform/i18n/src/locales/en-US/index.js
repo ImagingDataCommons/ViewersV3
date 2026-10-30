@@ -3,6 +3,7 @@ import AppearanceModal from './AppearanceModal.json';
 import Buttons from './Buttons.json';
 import CineDialog from './CineDialog.json';
 import Common from './Common.json';
+import DataAvailability from './DataAvailability.json';
 import DataSourceConfiguration from './DataSourceConfiguration.json';
 import DataTable from './DataTable.json';
 import DatePicker from './DatePicker.json';
@@ -43,6 +44,7 @@ export default {
     Buttons,
     CineDialog,
     Common,
+    DataAvailability,
     DataSourceConfiguration,
     DataTable,
     DatePicker,
