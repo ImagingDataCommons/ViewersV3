@@ -23,6 +23,22 @@ const GCP_HEALTHCARE_HOST = 'healthcare.googleapis.com';
 
 let displaySetsSubscription: { unsubscribe: () => void } | null = null;
 
+/** Bumped on every register and unregister, so results of a left viewer are dropped. */
+let generation = 0;
+
+/** Toasts shown for the current viewer, hidden when it is left. */
+const shownToastIds = new Set<string>();
+
+let notificationService: { show: (options) => unknown; hide?: (id: string) => void } | null = null;
+
+/** Persistent toasts get a button to close them; the toaster has no close button. */
+const dismissAction = () => ({ label: i18n.t('DataAvailability:Dismiss'), onClick: () => {} });
+
+function show(options: { id: string } & Record<string, unknown>) {
+  shownToastIds.add(options.id);
+  notificationService?.show(options);
+}
+
 /** Reads the study UIDs from the URL the same way the DICOMweb data source does. */
 function getStudyInstanceUIDsFromQuery(): string[] {
   const query = new URLSearchParams(window.location.search);
@@ -82,117 +98,94 @@ function getDataSourcesToCheck(extensionManager): CheckedDataSource[] {
 }
 
 /**
- * Notifies about stores that could not be queried or hold no data for the
- * study. When no store has the study, OHIF already routes to its "study not
- * found" page, so only failed queries are reported in that case. GCP stores
- * are left to the GCP extension.
+ * Notifies about stores that could not be queried. A study missing from one
+ * store is not reported: with ?gcp= the study is often only in the user's
+ * store, and when no store has it OHIF shows its "study not found" page. GCP
+ * stores are left to the GCP extension.
  */
-function notifyStudyAvailability(
-  { StudyInstanceUID, sources }: StudyAvailability,
-  uiNotificationService
-) {
-  const reported = sources.filter(source => !source.reportsOwnErrors);
-  const failed = reported.filter(source => source.status === 'failed');
-  const empty = reported.filter(source => source.status === 'empty');
-  const found = sources.filter(source => source.status === 'found');
-
-  failed.forEach(source => {
-    console.warn(
-      `[IDC] Could not query ${source.label} for study ${StudyInstanceUID}:`,
-      source.error
-    );
-    uiNotificationService.show({
-      id: `idc-data-availability-failed-${source.sourceName}-${StudyInstanceUID}`,
-      title: i18n.t('DataAvailability:Data source unavailable'),
-      message: i18n.t(
-        'DataAvailability:Could not query {{source}} for study {{studyInstanceUID}} ({{reason}}).',
-        {
-          source: source.label,
-          studyInstanceUID: StudyInstanceUID,
-          reason: describeError(source.error),
-        }
-      ),
-      type: 'error',
-      duration: Infinity,
+function notifyFailedSources({ StudyInstanceUID, sources }: StudyAvailability) {
+  sources
+    .filter(source => source.status === 'failed' && !source.reportsOwnErrors)
+    .forEach(source => {
+      console.warn(
+        `[IDC] Could not query ${source.label} for study ${StudyInstanceUID}:`,
+        source.error
+      );
+      show({
+        id: `idc-data-availability-failed-${source.sourceName}-${StudyInstanceUID}`,
+        title: i18n.t('DataAvailability:Data source unavailable'),
+        message: i18n.t(
+          'DataAvailability:Could not query {{source}} for study {{studyInstanceUID}} ({{reason}}).',
+          {
+            source: source.label,
+            studyInstanceUID: StudyInstanceUID,
+            reason: describeError(source.error),
+          }
+        ),
+        type: 'error',
+        duration: Infinity,
+        action: dismissAction(),
+      });
     });
-  });
-
-  if (!found.length) {
-    return;
-  }
-
-  empty.forEach(source => {
-    console.warn(`[IDC] Study ${StudyInstanceUID} was not found in ${source.label}`);
-    uiNotificationService.show({
-      id: `idc-data-availability-empty-${source.sourceName}-${StudyInstanceUID}`,
-      title: i18n.t('DataAvailability:Study not found in data source'),
-      message: i18n.t(
-        'DataAvailability:Study {{studyInstanceUID}} was not found in {{source}}. Showing data from {{others}} only.',
-        {
-          studyInstanceUID: StudyInstanceUID,
-          source: source.label,
-          others: found.map(other => other.label).join(', '),
-        }
-      ),
-      type: 'warning',
-      duration: 10000,
-    });
-  });
 }
 
-function notifyMissingReferencedSeries(
-  displaySet,
-  availability: StudyAvailability,
-  uiNotificationService
-) {
-  if (!isReferencedSeriesMissing(displaySet, availability)) {
+/** Labels of the derived series that reference each missing series, for one toast per series. */
+const derivedLabelsByMissingSeries = new Map<string, Set<string>>();
+
+function notifyMissingReferencedSeries(displaySet, availabilities: StudyAvailability[]) {
+  const { referencedSeriesInstanceUID } = displaySet;
+  if (!isReferencedSeriesMissing(displaySet, availabilities)) {
     return;
   }
 
-  const searched = availability.sources
-    .filter(source => source.status !== 'failed')
-    .map(source => source.label)
-    .join(', ');
-  const unchecked = availability.sources
-    .filter(source => source.status === 'failed')
-    .map(source => source.label)
-    .join(', ');
-  const label = displaySet.label || displaySet.SeriesDescription || displaySet.Modality;
-  const message = i18n.t(
-    'DataAvailability:{{label}} ({{modality}}) references series {{seriesInstanceUID}}, which was not found in {{sources}}. It cannot be displayed over its source images.',
-    {
-      label,
-      modality: displaySet.Modality,
-      seriesInstanceUID: displaySet.referencedSeriesInstanceUID,
-      sources: searched,
-    }
+  const sources = availabilities.flatMap(availability => availability.sources);
+  const unique = (labels: string[]) => [...new Set(labels)].join(', ');
+  const searched = unique(sources.filter(s => s.status !== 'failed').map(s => s.label));
+  const unchecked = unique(sources.filter(s => s.status === 'failed').map(s => s.label));
+
+  const labels = derivedLabelsByMissingSeries.get(referencedSeriesInstanceUID) ?? new Set();
+  labels.add(
+    `${displaySet.label || displaySet.SeriesDescription || displaySet.SeriesInstanceUID} (${displaySet.Modality})`
   );
+  derivedLabelsByMissingSeries.set(referencedSeriesInstanceUID, labels);
+
+  const options = {
+    derived: [...labels].join(', '),
+    seriesInstanceUID: referencedSeriesInstanceUID,
+    sources: searched,
+    unchecked,
+  };
 
   console.warn(
     `[IDC] ${displaySet.Modality} ${displaySet.SeriesInstanceUID} references series ` +
-      `${displaySet.referencedSeriesInstanceUID}, which was not found in ${searched}`
+      `${referencedSeriesInstanceUID}, which was not found in ${searched}`
   );
-  uiNotificationService.show({
-    id: `idc-data-availability-reference-${displaySet.SeriesInstanceUID}`,
+  show({
+    id: `idc-data-availability-reference-${referencedSeriesInstanceUID}`,
     title: i18n.t('DataAvailability:Referenced series not found'),
     message: unchecked
-      ? `${message} ${i18n.t('DataAvailability:{{sources}} could not be checked and may hold it.', {
-          sources: unchecked,
-        })}`
-      : message,
+      ? i18n.t(
+          'DataAvailability:{{derived}} references series {{seriesInstanceUID}}, which was not found in {{sources}}. {{unchecked}} could not be checked and may hold it.',
+          options
+        )
+      : i18n.t(
+          'DataAvailability:{{derived}} references series {{seriesInstanceUID}}, which was not found in {{sources}}. It cannot be displayed over its source images.',
+          options
+        ),
     type: 'warning',
     duration: Infinity,
+    action: dismissAction(),
   });
 }
 
 /**
  * Tells the user when the data they asked for is missing from a store:
- *   1. A data source (the main store or one added by ?gcp=) fails to answer
- *      or has no series for the requested study.
+ *   1. A data source (other than a GCP store) fails to answer for a study.
  *   2. A SEG, RTSTRUCT or other derived series references a series that none
- *      of the data sources hold, so it has no images to be displayed over.
+ *      of the data sources hold for the requested studies, so it has no
+ *      images to be displayed over.
  *
- * Safe to call on every `onModeEnter`; the previous subscription is torn down.
+ * Safe to call on every `onModeEnter`; the previous registration is torn down.
  */
 export function registerDataAvailabilityChecks({
   servicesManager,
@@ -203,42 +196,46 @@ export function registerDataAvailabilityChecks({
   extensionManager;
   config?: DataAvailabilityConfig;
 }): void {
-  displaySetsSubscription?.unsubscribe();
-  displaySetsSubscription = null;
+  unregisterDataAvailabilityChecks();
+  const current = generation;
 
   if (config?.enabled === false) {
     return;
   }
 
   const { displaySetService, uiNotificationService } = servicesManager.services;
+  notificationService = uiNotificationService;
   const dataSources = getDataSourcesToCheck(extensionManager);
   const studyInstanceUIDs = getStudyInstanceUIDsFromQuery();
   if (!dataSources.length || !studyInstanceUIDs.length) {
     return;
   }
 
-  const availabilityByStudy = new Map<string, Promise<StudyAvailability>>(
-    studyInstanceUIDs.map(StudyInstanceUID => [
-      StudyInstanceUID,
-      checkStudyAvailability(StudyInstanceUID, dataSources),
-    ])
+  const isCurrent = () => current === generation;
+  const availabilities = Promise.all(
+    studyInstanceUIDs.map(StudyInstanceUID => checkStudyAvailability(StudyInstanceUID, dataSources))
   );
 
-  availabilityByStudy.forEach(promise =>
-    promise.then(availability => notifyStudyAvailability(availability, uiNotificationService))
-  );
+  availabilities.then(results => {
+    if (isCurrent()) {
+      results.forEach(notifyFailedSources);
+    }
+  });
 
   const checkDisplaySet = displaySet => {
-    const availability = availabilityByStudy.get(displaySet?.StudyInstanceUID);
-    if (!availability || !displaySet.referencedSeriesInstanceUID) {
+    if (!displaySet?.referencedSeriesInstanceUID) {
       return;
     }
-    availability.then(result =>
-      notifyMissingReferencedSeries(displaySet, result, uiNotificationService)
-    );
+    availabilities.then(results => {
+      /** A series already loaded, from any study, is not missing. */
+      const loaded = displaySetService.getDisplaySetsForSeries(
+        displaySet.referencedSeriesInstanceUID
+      );
+      if (isCurrent() && !loaded?.length) {
+        notifyMissingReferencedSeries(displaySet, results);
+      }
+    });
   };
-
-  displaySetService.getActiveDisplaySets?.().forEach(checkDisplaySet);
 
   displaySetsSubscription = displaySetService.subscribe(
     displaySetService.EVENTS.DISPLAY_SETS_ADDED,
@@ -248,8 +245,12 @@ export function registerDataAvailabilityChecks({
   );
 }
 
-/** Tears down the display set subscription when the mode exits. */
+/** Drops pending results, hides this viewer's toasts and stops listening when the mode exits. */
 export function unregisterDataAvailabilityChecks(): void {
+  generation++;
   displaySetsSubscription?.unsubscribe();
   displaySetsSubscription = null;
+  shownToastIds.forEach(id => notificationService?.hide?.(id));
+  shownToastIds.clear();
+  derivedLabelsByMissingSeries.clear();
 }

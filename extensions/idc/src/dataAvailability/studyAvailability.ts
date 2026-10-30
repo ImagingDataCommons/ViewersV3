@@ -26,7 +26,8 @@ export type CheckedDataSource = {
 /**
  * Queries every data source for the series of a study in parallel. A failed
  * query is recorded rather than thrown, so one unreachable store does not hide
- * the result of the others.
+ * the result of the others. Some servers answer 404 for a study they do not
+ * hold, so a 404 counts as "no series here", not as a failure.
  */
 export async function checkStudyAvailability(
   StudyInstanceUID: string,
@@ -39,7 +40,7 @@ export async function checkStudyAvailability(
   const sources = results.map((result, index): SourceAvailability => {
     const { sourceName, label, reportsOwnErrors } = dataSources[index];
 
-    if (result.status === 'rejected') {
+    if (result.status === 'rejected' && (result.reason as { status?: number })?.status !== 404) {
       return {
         sourceName,
         label,
@@ -50,7 +51,8 @@ export async function checkStudyAvailability(
       };
     }
 
-    const series = (Array.isArray(result.value) ? result.value : []) as Array<{
+    const value = result.status === 'fulfilled' ? result.value : [];
+    const series = (Array.isArray(value) ? value : []) as Array<{
       seriesInstanceUid?: string;
     }>;
     const seriesInstanceUIDs = new Set(series.map(s => s.seriesInstanceUid).filter(Boolean));
@@ -69,21 +71,21 @@ export async function checkStudyAvailability(
 
 /**
  * Returns true when a derived display set (SEG, RTSTRUCT, ...) references a
- * series that no successfully queried data source holds for its study.
+ * series that no successfully queried data source holds in any of the
+ * requested studies. A reference into another requested study is fine.
  */
 export function isReferencedSeriesMissing(
-  displaySet: { StudyInstanceUID?: string; referencedSeriesInstanceUID?: string | null },
-  availability: StudyAvailability
+  displaySet: { referencedSeriesInstanceUID?: string | null },
+  availabilities: StudyAvailability[]
 ): boolean {
   const { referencedSeriesInstanceUID } = displaySet;
   if (!referencedSeriesInstanceUID) {
     return false;
   }
-  if (displaySet.StudyInstanceUID !== availability.StudyInstanceUID) {
-    return false;
-  }
 
-  const answered = availability.sources.filter(source => source.status !== 'failed');
+  const answered = availabilities
+    .flatMap(availability => availability.sources)
+    .filter(source => source.status !== 'failed');
   if (!answered.length) {
     return false;
   }

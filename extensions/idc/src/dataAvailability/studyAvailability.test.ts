@@ -32,6 +32,14 @@ describe('checkStudyAvailability', () => {
     expect(describeError(result.sources[2].error)).toBe('HTTP 403 Forbidden');
   });
 
+  it('treats a 404 as a source without the study', async () => {
+    const notFound = Object.assign(new Error('request failed'), { status: 404 });
+    const result = await checkStudyAvailability(STUDY, [
+      source('idc', () => Promise.reject(notFound)),
+    ]);
+    expect(result.sources[0].status).toBe('empty');
+  });
+
   it('keeps which sources report their own errors', async () => {
     const result = await checkStudyAvailability(STUDY, [
       source('idc', () => Promise.resolve([])),
@@ -55,60 +63,42 @@ describe('describeError', () => {
 });
 
 describe('isReferencedSeriesMissing', () => {
-  const availability = {
-    StudyInstanceUID: STUDY,
-    sources: [
-      {
-        sourceName: 'idc',
-        label: 'idc',
-        status: 'empty' as const,
-        seriesInstanceUIDs: new Set<string>(),
-      },
-      {
-        sourceName: 'gcp',
-        label: 'gcp',
-        status: 'found' as const,
-        seriesInstanceUIDs: new Set([SEG]),
-      },
-    ],
-  };
+  const sourceWith = (sourceName: string, status, uids: string[]) => ({
+    sourceName,
+    label: sourceName,
+    status,
+    seriesInstanceUIDs: new Set(uids),
+  });
+  const study = (StudyInstanceUID: string, sources) => ({ StudyInstanceUID, sources });
+  const availability = [
+    study(STUDY, [sourceWith('idc', 'empty', []), sourceWith('gcp', 'found', [SEG])]),
+  ];
 
   it('is true when no source holds the referenced series', () => {
-    expect(
-      isReferencedSeriesMissing(
-        { StudyInstanceUID: STUDY, referencedSeriesInstanceUID: CT },
-        availability
-      )
-    ).toBe(true);
+    expect(isReferencedSeriesMissing({ referencedSeriesInstanceUID: CT }, availability)).toBe(true);
   });
 
   it('is false when a source holds the referenced series', () => {
+    expect(isReferencedSeriesMissing({ referencedSeriesInstanceUID: SEG }, availability)).toBe(
+      false
+    );
+  });
+
+  it('is false when the series is in another requested study', () => {
     expect(
-      isReferencedSeriesMissing(
-        { StudyInstanceUID: STUDY, referencedSeriesInstanceUID: SEG },
-        availability
-      )
+      isReferencedSeriesMissing({ referencedSeriesInstanceUID: CT }, [
+        ...availability,
+        study('4.5.6', [sourceWith('idc', 'found', [CT])]),
+      ])
     ).toBe(false);
   });
 
-  it('is false without a reference, for another study, or when every query failed', () => {
-    expect(isReferencedSeriesMissing({ StudyInstanceUID: STUDY }, availability)).toBe(false);
+  it('is false without a reference, or when every query failed', () => {
+    expect(isReferencedSeriesMissing({}, availability)).toBe(false);
     expect(
-      isReferencedSeriesMissing(
-        { StudyInstanceUID: '9.9', referencedSeriesInstanceUID: CT },
-        availability
-      )
-    ).toBe(false);
-    expect(
-      isReferencedSeriesMissing(
-        { StudyInstanceUID: STUDY, referencedSeriesInstanceUID: CT },
-        {
-          StudyInstanceUID: STUDY,
-          sources: [
-            { sourceName: 'idc', label: 'idc', status: 'failed', seriesInstanceUIDs: new Set() },
-          ],
-        }
-      )
+      isReferencedSeriesMissing({ referencedSeriesInstanceUID: CT }, [
+        study(STUDY, [sourceWith('idc', 'failed', [])]),
+      ])
     ).toBe(false);
   });
 });
