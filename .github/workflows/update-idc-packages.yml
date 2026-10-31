@@ -1,9 +1,12 @@
 name: Update IDC packages
 
 # package.json follows the main branch of the IDC GCP extension and mode, but
-# every build installs the commits pinned in pnpm-lock.yaml. This job moves
-# those pins to the latest main and opens (or refreshes) a pull request, so
-# new extension and mode changes reach the viewer as a reviewable commit.
+# every build installs the commits pinned in pnpm-lock.yaml. This workflow
+# moves those pins to the latest main and opens (or refreshes) a pull request,
+# so new extension and mode changes reach the viewer as a reviewable commit.
+#
+# The update job installs and builds dependency code with a read-only token.
+# Only the pull-request job can write, and it runs no dependency code.
 on:
   schedule:
     - cron: '17 * * * *'
@@ -19,23 +22,33 @@ concurrency:
   group: ${{ github.workflow }}
   cancel-in-progress: false
 
+env:
+  BRANCH: chore/update-idc-packages
+  PR_TITLE: 'chore(deps): update IDC GCP extension and mode'
+
 jobs:
   update:
     if: github.repository == 'ImagingDataCommons/ViewersV3'
     timeout-minutes: 60
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      pull-requests: write
-    env:
-      BRANCH: chore/update-idc-packages
-      PACKAGES: '@idc/gcp-extension @idc/gcp-mode'
+      contents: read
+      pull-requests: read
+    outputs:
+      action: ${{ steps.compare.outputs.action }}
+      summary: ${{ steps.compare.outputs.summary }}
+      pr: ${{ steps.compare.outputs.pr }}
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           ref: master
           persist-credentials: false
 
+      # Sets `action` to:
+      # - update: master is behind main, and no open PR has the latest commits
+      #   on top of the current master;
+      # - close: master already has the latest commits, but an update PR is open;
+      # - none: nothing to do.
       - name: Compare pinned and latest commits
         id: compare
         shell: bash
@@ -46,17 +59,18 @@ jobs:
           pinned() { grep -oE "ohif-$1/tar.gz/[0-9a-f]{40}" "$2" | head -1 | sed 's#.*/##'; }
           latest() { git ls-remote "https://github.com/ImagingDataCommons/ohif-$1" refs/heads/main | cut -f1; }
 
-          # The lockfile of an update PR that is still open and based on the
-          # current master, if any. One based on an older master is redone.
-          proposed=''
           open_pr=$(gh pr list --head "$BRANCH" --base master --state open --json number --jq '.[0].number // empty')
+
+          # The lockfile of the open update PR, when it is based on the current
+          # master. One based on an older master is redone.
+          proposed=''
           if [ -n "$open_pr" ] && git fetch --depth 2 origin "$BRANCH" &&
             [ "$(git rev-parse FETCH_HEAD^)" = "$(git rev-parse HEAD)" ]; then
             proposed=$(mktemp)
             git show FETCH_HEAD:pnpm-lock.yaml > "$proposed"
           fi
 
-          changed=false
+          behind=false
           proposed_is_latest=true
           summary=''
           for repo in gcp-extension gcp-mode; do
@@ -67,43 +81,58 @@ jobs:
               exit 1
             fi
             if [ "$from" != "$to" ]; then
-              changed=true
+              behind=true
               summary+="- ohif-${repo}: [\`${from:0:7}...${to:0:7}\`](https://github.com/ImagingDataCommons/ohif-${repo}/compare/${from}...${to})"$'\n'
             fi
             if [ -z "$proposed" ] || [ "$(pinned "$repo" "$proposed")" != "$to" ]; then
               proposed_is_latest=false
             fi
           done
-          if [ "$changed" = true ] && [ "$proposed_is_latest" = true ]; then
-            echo "The open update PR already has the latest commits."
-            changed=false
+
+          action=none
+          if [ "$behind" = true ] && [ "$proposed_is_latest" = false ]; then
+            action=update
+          elif [ "$behind" = false ] && [ -n "$open_pr" ]; then
+            action=close
           fi
-          echo "changed=$changed" >> "$GITHUB_OUTPUT"
+
+          echo "action=$action" >> "$GITHUB_OUTPUT"
+          echo "pr=$open_pr" >> "$GITHUB_OUTPUT"
           {
             echo 'summary<<EOF'
             printf '%s' "$summary"
             echo 'EOF'
           } >> "$GITHUB_OUTPUT"
-          echo "Changed: $changed"
+          echo "Action: $action"
           printf '%s' "$summary"
 
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-        if: steps.compare.outputs.changed == 'true'
+        if: steps.compare.outputs.action == 'update'
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
-        if: steps.compare.outputs.changed == 'true'
+        if: steps.compare.outputs.action == 'update'
         with:
           node-version: 24.15.0
           cache: pnpm
 
       - name: Update the lockfile
-        if: steps.compare.outputs.changed == 'true'
-        run: pnpm update -r $PACKAGES --lockfile-only
+        if: steps.compare.outputs.action == 'update'
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm update -r @idc/gcp-extension @idc/gcp-mode --lockfile-only
+          # Only the lockfile may change: the pull request commits nothing else,
+          # and a frozen install fails when package.json and the lockfile differ.
+          others=$(git diff --name-only -- . ':!pnpm-lock.yaml')
+          if [ -n "$others" ]; then
+            echo "::error::The update changed files other than pnpm-lock.yaml: $others"
+            exit 1
+          fi
 
       # Builds from the updated lockfile the way idc-deploy-shell/buildViewer.sh
       # does. Pull requests opened with the workflow token start no other
       # workflows, so this is the check that the update installs and builds.
       - name: Install and build
-        if: steps.compare.outputs.changed == 'true'
+        if: steps.compare.outputs.action == 'update'
         env:
           PUBLIC_URL: /v3/
           NODE_OPTIONS: --max-old-space-size=6000
@@ -111,33 +140,68 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm run build
 
-      - name: Open or refresh the pull request
-        if: steps.compare.outputs.changed == 'true'
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: steps.compare.outputs.action == 'update'
+        with:
+          name: pnpm-lock
+          path: pnpm-lock.yaml
+          retention-days: 1
+
+  pull-request:
+    needs: update
+    if: needs.update.outputs.action != 'none'
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Close the update PR
+        if: needs.update.outputs.action == 'close'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ needs.update.outputs.pr }}
+        run: >-
+          gh pr close "$PR" --repo "$GITHUB_REPOSITORY" --delete-branch
+          --comment 'master already has the latest IDC GCP extension and mode.'
+
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        if: needs.update.outputs.action == 'update'
+        with:
+          ref: master
+          persist-credentials: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: needs.update.outputs.action == 'update'
+        with:
+          name: pnpm-lock
+
+      - name: Push and open or refresh the PR
+        if: needs.update.outputs.action == 'update'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          SUMMARY: ${{ steps.compare.outputs.summary }}
+          SUMMARY: ${{ needs.update.outputs.summary }}
         run: |
           set -euo pipefail
           if git diff --quiet -- pnpm-lock.yaml; then
-            echo 'The lockfile did not change.'
-            exit 0
+            echo "::error::The downloaded lockfile does not differ from master."
+            exit 1
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git switch -c "$BRANCH"
           git add -- pnpm-lock.yaml
-          git commit -m 'chore(deps): update IDC GCP extension and mode' -m "$SUMMARY"
+          git commit -m "$PR_TITLE" -m "$SUMMARY"
           git push --force "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/${BRANCH}"
 
           body=$(printf '%s\n\n%s\n\n%s\n' \
             'Moves the IDC packages in `pnpm-lock.yaml` to the latest commit on their `main` branch.' \
             "$SUMMARY" \
-            'The lockfile was installed with `--frozen-lockfile` and the viewer was built in the workflow run that opened this PR. This branch is refreshed on every run while the PR is open.')
+            "The lockfile was installed with \`--frozen-lockfile\` and the viewer was built in [the workflow run](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}) that pushed this branch. The branch is refreshed while this PR is open.")
           number=$(gh pr list --head "$BRANCH" --base master --state open --json number --jq '.[0].number // empty')
           if [ -n "$number" ]; then
             gh pr edit "$number" --body "$body"
           else
-            gh pr create --base master --head "$BRANCH" \
-              --title 'chore(deps): update IDC GCP extension and mode' --body "$body"
+            gh pr create --base master --head "$BRANCH" --title "$PR_TITLE" --body "$body"
           fi
