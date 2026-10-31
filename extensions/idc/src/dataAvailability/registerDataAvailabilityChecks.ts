@@ -36,23 +36,9 @@ function getStudyInstanceUIDsFromQuery(): string[] {
 }
 
 /**
- * Builds a label users can act on. Stores configured at runtime (for example
- * from the ?gcp= query param) are named by their DICOM store, not by the
- * generic friendly name of the data source.
- */
-function getDataSourceLabel(sourceName: string, definition, dataSource): string {
-  const qidoRoot: string | undefined = dataSource.getConfig?.()?.qidoRoot;
-  const store = qidoRoot?.match(/\/dicomStores\/([^/]+)/)?.[1];
-  if (store) {
-    return i18n.t('DataAvailability:GCP DICOM store {{store}}', { store });
-  }
-  return definition?.friendlyName || definition?.configuration?.friendlyName || sourceName;
-}
-
-/**
  * Returns the DICOMweb data sources behind the active data source: each member
  * of a merge data source, or the active data source itself. Sources without a
- * QIDO root (for example `gcp` without a valid ?gcp= param) are skipped.
+ * QIDO root are skipped.
  */
 function getDataSourcesToCheck(extensionManager): CheckedDataSource[] {
   const activeDefinition = extensionManager.getActiveDataSourceDefinition();
@@ -76,7 +62,7 @@ function getDataSourcesToCheck(extensionManager): CheckedDataSource[] {
       }
       return {
         sourceName,
-        label: getDataSourceLabel(sourceName, definition, dataSource),
+        label: definition?.friendlyName || definition?.configuration?.friendlyName || sourceName,
         dataSource,
       };
     })
@@ -131,8 +117,8 @@ function notifyMissingReferencedSeries(displaySet, availabilities: StudyAvailabi
 /**
  * Tells the user when a SEG, RTSTRUCT or other derived series references a
  * series that none of the data sources hold for the requested studies, so it
- * has no images to be displayed over. With ?gcp= the data sources are the
- * members of the merge data source.
+ * has no images to be displayed over. With a merge data source the data
+ * sources are its members.
  *
  * Normal loads send no extra requests: a reference is first looked up in the
  * loaded display sets and in the series lists OHIF already fetched. Only a

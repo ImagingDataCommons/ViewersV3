@@ -72,8 +72,7 @@ function setup(sources: Record<string, { qidoRoot: string; search: Search }>) {
 }
 
 const IDC_ROOT = 'https://proxy.example/dicomWeb';
-const GCP_ROOT =
-  'https://healthcare.googleapis.com/v1/projects/p/locations/l/datasets/d/dicomStores/s/dicomWeb';
+const ARCHIVE_ROOT = 'https://archive.example/dicomweb';
 const holding = (...uids: string[]): Search =>
   jest.fn(() => Promise.resolve(uids.map(seriesInstanceUid => ({ seriesInstanceUid }))));
 const seg = (referencedSeriesInstanceUID: string, SeriesInstanceUID = '9.9') => ({
@@ -114,23 +113,23 @@ describe('registerDataAvailabilityChecks', () => {
 
   it('asks each source once and warns once per missing series, listing every derived series', async () => {
     const idc = holding('5.5');
-    const gcp = holding('9.1', '9.2');
+    const archive = holding('9.1', '9.2');
     const { services, register, addDisplaySets } = setup({
       idc: { qidoRoot: IDC_ROOT, search: idc },
-      gcp: { qidoRoot: GCP_ROOT, search: gcp },
+      archive: { qidoRoot: ARCHIVE_ROOT, search: archive },
     });
     register();
     addDisplaySets(seg(CT, '9.1'), seg(CT, '9.2'));
     await flush();
 
     expect(idc).toHaveBeenCalledTimes(1);
-    expect(gcp).toHaveBeenCalledTimes(1);
+    expect(archive).toHaveBeenCalledTimes(1);
     const shown = services.uiNotificationService.show.mock.calls.map(([options]) => options);
     expect(new Set(shown.map(options => options.id))).toEqual(
       new Set([`idc-data-availability-reference-${CT}`])
     );
     expect(shown.at(-1).message).toContain('SEG 9.1 (SEG), SEG 9.2 (SEG)');
-    expect(shown.at(-1).message).toContain('GCP DICOM store s');
+    expect(shown.at(-1).message).toContain('idc, archive');
   });
 
   it('does not warn when a source holds the series that was not listed yet', async () => {
@@ -146,7 +145,7 @@ describe('registerDataAvailabilityChecks', () => {
   it('says which source could not be checked', async () => {
     const { services, register, addDisplaySets } = setup({
       idc: { qidoRoot: IDC_ROOT, search: holding('5.5') },
-      gcp: { qidoRoot: GCP_ROOT, search: jest.fn(() => Promise.reject(new Error('403'))) },
+      archive: { qidoRoot: ARCHIVE_ROOT, search: jest.fn(() => Promise.reject(new Error('403'))) },
     });
     register();
     addDisplaySets(seg(CT));
@@ -154,7 +153,7 @@ describe('registerDataAvailabilityChecks', () => {
 
     const [[options]] = services.uiNotificationService.show.mock.calls;
     expect(options.message).toContain('could not be checked');
-    expect(options.message).toContain('GCP DICOM store s could not be checked');
+    expect(options.message).toContain('archive could not be checked');
   });
 
   it('drops late results and hides its toasts when the mode exits', async () => {

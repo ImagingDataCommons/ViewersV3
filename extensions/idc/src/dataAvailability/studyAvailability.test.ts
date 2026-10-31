@@ -19,7 +19,7 @@ describe('checkStudyAvailability', () => {
 
     const result = await checkStudyAvailability(STUDY, [
       source('idc', () => Promise.resolve([])),
-      source('gcp', () => Promise.resolve([{ seriesInstanceUid: SEG }])),
+      source('archive', () => Promise.resolve([{ seriesInstanceUid: SEG }])),
       source('other', () => Promise.reject(error)),
     ]);
 
@@ -46,7 +46,7 @@ describe('isReferencedSeriesMissing', () => {
   });
   const study = (StudyInstanceUID: string, sources) => ({ StudyInstanceUID, sources });
   const availability = [
-    study(STUDY, [sourceWith('idc', 'empty', []), sourceWith('gcp', 'found', [SEG])]),
+    study(STUDY, [sourceWith('idc', 'empty', []), sourceWith('archive', 'found', [SEG])]),
   ];
 
   it('is true when no source holds the referenced series', () => {
