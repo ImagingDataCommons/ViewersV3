@@ -255,10 +255,10 @@ importers:
     dependencies:
       '@idc/gcp-extension':
         specifier: github:ImagingDataCommons/ohif-gcp-extension#main
-        version: https://codeload.github.com/ImagingDataCommons/ohif-gcp-extension/tar.gz/e67addc5327241f0fe55ba700d76dc5eca934368(@ohif/app@platform+app)(@ohif/core@platform+core)(@ohif/extension-cornerstone@extensions+cornerstone)(@ohif/extension-default@extensions+default)(@ohif/i18n@platform+i18n)(@ohif/ui-next@platform+ui-next)(prop-types@15.8.1)(react-dom@18.3.1(react@18.3.1))(react-i18next@12.3.1(i18next@19.9.2)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-router-dom@6.30.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-router@6.30.3(react@18.3.1))(react@18.3.1)(webpack-merge@5.10.0)(webpack@5.105.0(@swc/core@1.16.13(@swc/helpers@0.5.23))(@swc/html@1.16.13)(clean-css@5.3.3)(cssnano@6.1.2(postcss@8.5.26))(csso@5.0.5)(html-minifier-terser@7.2.0)(lightningcss@1.33.0)(postcss@8.5.26))
+        version: https://codeload.github.com/ImagingDataCommons/ohif-gcp-extension/tar.gz/89bc6a60cd82a38a8b602b2f4514b4aa898f91c9(@ohif/app@platform+app)(@ohif/core@platform+core)(@ohif/extension-cornerstone@extensions+cornerstone)(@ohif/extension-default@extensions+default)(@ohif/i18n@platform+i18n)(@ohif/ui-next@platform+ui-next)(prop-types@15.8.1)(react-dom@18.3.1(react@18.3.1))(react-i18next@12.3.1(i18next@19.9.2)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-router-dom@6.30.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-router@6.30.3(react@18.3.1))(react@18.3.1)(webpack-merge@5.10.0)(webpack@5.105.0(@swc/core@1.16.13(@swc/helpers@0.5.23))(@swc/html@1.16.13)(clean-css@5.3.3)(cssnano@6.1.2(postcss@8.5.26))(csso@5.0.5)(html-minifier-terser@7.2.0)(lightningcss@1.33.0)(postcss@8.5.26))
       '@idc/gcp-mode':
         specifier: github:ImagingDataCommons/ohif-gcp-mode#main
-        version: https://codeload.github.com/ImagingDataCommons/ohif-gcp-mode/tar.gz/15ebdabed8e6e25e420edd488fa54639c1581c4f(@ohif/core@platform+core)(@ohif/extension-cornerstone-dicom-pmap@extensions+cornerstone-dicom-pmap)(@ohif/extension-cornerstone-dicom-rt@extensions+cornerstone-dicom-rt)(@ohif/extension-cornerstone-dicom-seg@extensions+cornerstone-dicom-seg)(@ohif/extension-cornerstone-dicom-sr@extensions+cornerstone-dicom-sr)(@ohif/extension-cornerstone@extensions+cornerstone)(@ohif/extension-default@extensions+default)(@ohif/extension-dicom-pdf@extensions+dicom-pdf)(@ohif/extension-dicom-video@extensions+dicom-video)(@ohif/extension-measurement-tracking@extensions+measurement-tracking)
+        version: https://codeload.github.com/ImagingDataCommons/ohif-gcp-mode/tar.gz/806b24cd31e94a01f9c1168cd560bff049cee6d6(@ohif/core@platform+core)(@ohif/extension-cornerstone-dicom-pmap@extensions+cornerstone-dicom-pmap)(@ohif/extension-cornerstone-dicom-rt@extensions+cornerstone-dicom-rt)(@ohif/extension-cornerstone-dicom-seg@extensions+cornerstone-dicom-seg)(@ohif/extension-cornerstone-dicom-sr@extensions+cornerstone-dicom-sr)(@ohif/extension-cornerstone@extensions+cornerstone)(@ohif/extension-default@extensions+default)(@ohif/extension-dicom-pdf@extensions+dicom-pdf)(@ohif/extension-dicom-video@extensions+dicom-video)(@ohif/extension-measurement-tracking@extensions+measurement-tracking)
       axios:
         specifier: 1.20.0
         version: 1.20.0(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1)
@@ -428,7 +428,7 @@ importers:
         version: 5.6.8(patch_hash=a80dc1a8df5e9e7fbfe0ad7ab6eff21acfca717ebb4cbb8a751cd61d51ab4da5)(@cornerstonejs/metadata@5.6.8)(@cornerstonejs/utils@5.6.8)(autoprefixer@10.6.1(postcss@8.5.26))(wslink@2.5.0)
       '@cornerstonejs/dicom-image-loader':
         specifier: 5.6.8
-        version: 5.6.8(@cornerstonejs/core@5.6.8(patch_hash=a80dc1a8df5e9e7fbfe0ad7ab6eff21acfca717ebb4cbb8a751cd61d51ab4da5)(@cornerstonejs/metadata@5.6.8)(autoprefixer@10.6.1(postcss@8.5.26))(wslink@2.5.0))(@cornerstonejs/metadata@5.6.8)(dicom-parser@1.8.21)
+        version: 5.6.8(@cornerstonejs/core@5.6.8(patch_hash=a80dc1a8df5e9e7fbfe0ad7ab6eff21acfca717ebb4cbb8a751cd61d51ab4da5)(@cornerstonejs/metadata@5.6.8)(@cornerstonejs/utils@5.6.8)(autoprefixer@10.6.1(postcss@8.5.26))(wslink@2.5.0))(@cornerstonejs/metadata@5.6.8)(dicom-parser@1.8.21)
       '@cornerstonejs/labelmap-interpolation':
         specifier: 5.6.8
         version: 5.6.8(@cornerstonejs/core@5.6.8(patch_hash=a80dc1a8df5e9e7fbfe0ad7ab6eff21acfca717ebb4cbb8a751cd61d51ab4da5)(@cornerstonejs/metadata@5.6.8)(@cornerstonejs/utils@5.6.8)(autoprefixer@10.6.1(postcss@8.5.26))(wslink@2.5.0))(@cornerstonejs/tools@5.6.8(@cornerstonejs/core@5.6.8(patch_hash=a80dc1a8df5e9e7fbfe0ad7ab6eff21acfca717ebb4cbb8a751cd61d51ab4da5)(@cornerstonejs/metadata@5.6.8)(@cornerstonejs/utils@5.6.8)(autoprefixer@10.6.1(postcss@8.5.26))(wslink@2.5.0))(@kitware/vtk.js@36.4.1(autoprefixer@10.6.1(postcss@8.5.26))(wslink@2.5.0))(@types/d3-array@3.2.1)(@types/d3-interpolate@3.0.4)(d3-array@3.2.4)(d3-interpolate@3.0.1)(gl-matrix@3.4.3))(@kitware/vtk.js@36.4.1(autoprefixer@10.6.1(postcss@8.5.26))(wslink@2.5.0))(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1)
@@ -1624,16 +1624,16 @@ importers:
         version: 2.4.7
       '@cornerstonejs/dicom-image-loader':
         specifier: 5.6.8
-        version: 5.6.8(@cornerstonejs/core@5.6.8(patch_hash=a80dc1a8df5e9e7fbfe0ad7ab6eff21acfca717ebb4cbb8a751cd61d51ab4da5)(@cornerstonejs/metadata@5.6.8)(autoprefixer@10.6.1(postcss@8.5.26))(wslink@2.5.0))(@cornerstonejs/metadata@5.6.8)(dicom-parser@1.8.21)
+        version: 5.6.8(@cornerstonejs/core@5.6.8(patch_hash=a80dc1a8df5e9e7fbfe0ad7ab6eff21acfca717ebb4cbb8a751cd61d51ab4da5)(@cornerstonejs/metadata@5.6.8)(@cornerstonejs/utils@5.6.8)(autoprefixer@10.6.1(postcss@8.5.26))(wslink@2.5.0))(@cornerstonejs/metadata@5.6.8)(dicom-parser@1.8.21)
       '@emotion/serialize':
         specifier: 1.3.3
         version: 1.3.3
       '@idc/gcp-extension':
         specifier: github:ImagingDataCommons/ohif-gcp-extension#main
-        version: https://codeload.github.com/ImagingDataCommons/ohif-gcp-extension/tar.gz/e67addc5327241f0fe55ba700d76dc5eca934368(@ohif/app@platform+app)(@ohif/core@platform+core)(@ohif/extension-cornerstone@extensions+cornerstone)(@ohif/extension-default@extensions+default)(@ohif/i18n@platform+i18n)(@ohif/ui-next@platform+ui-next)(prop-types@15.8.1)(react-dom@18.3.1(react@18.3.1))(react-i18next@12.3.1(i18next@19.9.2)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-router-dom@6.30.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-router@6.30.3(react@18.3.1))(react@18.3.1)(webpack-merge@5.10.0)(webpack@5.105.0(@swc/core@1.16.13(@swc/helpers@0.5.23))(@swc/html@1.16.13)(clean-css@5.3.3)(cssnano@5.1.15(postcss@8.5.26))(csso@5.0.5)(html-minifier-terser@7.2.0)(lightningcss@1.33.0)(postcss@8.5.26))
+        version: https://codeload.github.com/ImagingDataCommons/ohif-gcp-extension/tar.gz/89bc6a60cd82a38a8b602b2f4514b4aa898f91c9(@ohif/app@platform+app)(@ohif/core@platform+core)(@ohif/extension-cornerstone@extensions+cornerstone)(@ohif/extension-default@extensions+default)(@ohif/i18n@platform+i18n)(@ohif/ui-next@platform+ui-next)(prop-types@15.8.1)(react-dom@18.3.1(react@18.3.1))(react-i18next@12.3.1(i18next@19.9.2)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-router-dom@6.30.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-router@6.30.3(react@18.3.1))(react@18.3.1)(webpack-merge@5.10.0)(webpack@5.105.0(@swc/core@1.16.13(@swc/helpers@0.5.23))(@swc/html@1.16.13)(clean-css@5.3.3)(cssnano@5.1.15(postcss@8.5.26))(csso@5.0.5)(html-minifier-terser@7.2.0)(lightningcss@1.33.0)(postcss@8.5.26))
       '@idc/gcp-mode':
         specifier: github:ImagingDataCommons/ohif-gcp-mode#main
-        version: https://codeload.github.com/ImagingDataCommons/ohif-gcp-mode/tar.gz/15ebdabed8e6e25e420edd488fa54639c1581c4f(@ohif/core@platform+core)(@ohif/extension-cornerstone-dicom-pmap@extensions+cornerstone-dicom-pmap)(@ohif/extension-cornerstone-dicom-rt@extensions+cornerstone-dicom-rt)(@ohif/extension-cornerstone-dicom-seg@extensions+cornerstone-dicom-seg)(@ohif/extension-cornerstone-dicom-sr@extensions+cornerstone-dicom-sr)(@ohif/extension-cornerstone@extensions+cornerstone)(@ohif/extension-default@extensions+default)(@ohif/extension-dicom-pdf@extensions+dicom-pdf)(@ohif/extension-dicom-video@extensions+dicom-video)(@ohif/extension-measurement-tracking@extensions+measurement-tracking)
+        version: https://codeload.github.com/ImagingDataCommons/ohif-gcp-mode/tar.gz/806b24cd31e94a01f9c1168cd560bff049cee6d6(@ohif/core@platform+core)(@ohif/extension-cornerstone-dicom-pmap@extensions+cornerstone-dicom-pmap)(@ohif/extension-cornerstone-dicom-rt@extensions+cornerstone-dicom-rt)(@ohif/extension-cornerstone-dicom-seg@extensions+cornerstone-dicom-seg)(@ohif/extension-cornerstone-dicom-sr@extensions+cornerstone-dicom-sr)(@ohif/extension-cornerstone@extensions+cornerstone)(@ohif/extension-default@extensions+default)(@ohif/extension-dicom-pdf@extensions+dicom-pdf)(@ohif/extension-dicom-video@extensions+dicom-video)(@ohif/extension-measurement-tracking@extensions+measurement-tracking)
       '@ohif/core':
         specifier: workspace:*
         version: link:../core
@@ -1844,7 +1844,7 @@ importers:
         version: 5.6.8(patch_hash=a80dc1a8df5e9e7fbfe0ad7ab6eff21acfca717ebb4cbb8a751cd61d51ab4da5)(@cornerstonejs/metadata@5.6.8)(@cornerstonejs/utils@5.6.8)(autoprefixer@10.6.1(postcss@8.5.26))(wslink@2.5.0)
       '@cornerstonejs/dicom-image-loader':
         specifier: 5.6.8
-        version: 5.6.8(@cornerstonejs/core@5.6.8(patch_hash=a80dc1a8df5e9e7fbfe0ad7ab6eff21acfca717ebb4cbb8a751cd61d51ab4da5)(@cornerstonejs/metadata@5.6.8)(autoprefixer@10.6.1(postcss@8.5.26))(wslink@2.5.0))(@cornerstonejs/metadata@5.6.8)(dicom-parser@1.8.21)
+        version: 5.6.8(@cornerstonejs/core@5.6.8(patch_hash=a80dc1a8df5e9e7fbfe0ad7ab6eff21acfca717ebb4cbb8a751cd61d51ab4da5)(@cornerstonejs/metadata@5.6.8)(@cornerstonejs/utils@5.6.8)(autoprefixer@10.6.1(postcss@8.5.26))(wslink@2.5.0))(@cornerstonejs/metadata@5.6.8)(dicom-parser@1.8.21)
       '@cornerstonejs/metadata':
         specifier: 5.6.8
         version: 5.6.8
@@ -3953,8 +3953,8 @@ packages:
     resolution: {integrity: sha512-3sZmiwG8I0NaqPle0L7+V/ZexiR7IjIUFkUsaOoFI9rNuBGyyMMmxAxnCmqcDFtBDk9h+JEYJf6e3NnqlHi/HQ==}
     engines: {node: '>=0.14'}
 
-  '@idc/gcp-extension@https://codeload.github.com/ImagingDataCommons/ohif-gcp-extension/tar.gz/e67addc5327241f0fe55ba700d76dc5eca934368':
-    resolution: {gitHosted: true, integrity: sha512-/0dqPHeRPo1dow66SXAwpqwC5QIT3seE4VzYwcTvrOmXFBMWoWwlAtVQBZxAc893Ca6zB4wpEBhDwXdSWVKMYg==, tarball: https://codeload.github.com/ImagingDataCommons/ohif-gcp-extension/tar.gz/e67addc5327241f0fe55ba700d76dc5eca934368}
+  '@idc/gcp-extension@https://codeload.github.com/ImagingDataCommons/ohif-gcp-extension/tar.gz/89bc6a60cd82a38a8b602b2f4514b4aa898f91c9':
+    resolution: {gitHosted: true, integrity: sha512-wHz6EP7+CPnB0xrJytBVtysAPU0uHGz07jeA67YgFv8xqi8VLW12Q43bV/5HMEi9KxreZZ6JQE51o4VEXg8c+g==, tarball: https://codeload.github.com/ImagingDataCommons/ohif-gcp-extension/tar.gz/89bc6a60cd82a38a8b602b2f4514b4aa898f91c9}
     version: 0.0.1
     engines: {node: '>=14', npm: '>=6', yarn: '>=1.18.0'}
     peerDependencies:
@@ -3973,8 +3973,8 @@ packages:
       webpack: 5.105.0
       webpack-merge: 5.10.0
 
-  '@idc/gcp-mode@https://codeload.github.com/ImagingDataCommons/ohif-gcp-mode/tar.gz/15ebdabed8e6e25e420edd488fa54639c1581c4f':
-    resolution: {gitHosted: true, integrity: sha512-IQNLFBKRYZVszxRRiGsMEVuQ2hrP82czptxStK7Utb0vIGm2qydqj6lRs4aCQ7EpCero3h+AOtOZV0dV5WVAAQ==, tarball: https://codeload.github.com/ImagingDataCommons/ohif-gcp-mode/tar.gz/15ebdabed8e6e25e420edd488fa54639c1581c4f}
+  '@idc/gcp-mode@https://codeload.github.com/ImagingDataCommons/ohif-gcp-mode/tar.gz/806b24cd31e94a01f9c1168cd560bff049cee6d6':
+    resolution: {gitHosted: true, integrity: sha512-P0YjSWNRS9+aZgHdaonAhJi50hT6taHo4lP75kGeLZy6geI83sAAIbm+E4D8S5kbV7HNNUO9rjpO8IEZrLKVTA==, tarball: https://codeload.github.com/ImagingDataCommons/ohif-gcp-mode/tar.gz/806b24cd31e94a01f9c1168cd560bff049cee6d6}
     version: 0.0.1
     engines: {node: '>=24'}
     peerDependencies:
@@ -6236,6 +6236,11 @@ packages:
 
   ajv-formats@3.0.1:
     resolution: {integrity: sha512-8iUql50EUR+uUcdRQ3HDqa6EVyo3docL8g5WJ3FNcWmu62IbkGUue/pEyLBW8VGKKucTPgqeks4fIU1DA4yowQ==}
+    peerDependencies:
+      ajv: ^8.0.0
+    peerDependenciesMeta:
+      ajv:
+        optional: true
 
   ajv-keywords@3.5.2:
     resolution: {integrity: sha512-5p6WTN0DdTGVQk6VjcEju19IgaHudalcfabD7yhDGeA6bcQnmL+CpveLJq/3hvfwd1aof6L386Ougkx6RfyMIQ==}
@@ -14786,7 +14791,7 @@ snapshots:
       - autoprefixer
       - wslink
 
-  '@cornerstonejs/dicom-image-loader@5.6.8(@cornerstonejs/core@5.6.8(patch_hash=a80dc1a8df5e9e7fbfe0ad7ab6eff21acfca717ebb4cbb8a751cd61d51ab4da5)(@cornerstonejs/metadata@5.6.8)(autoprefixer@10.6.1(postcss@8.5.26))(wslink@2.5.0))(@cornerstonejs/metadata@5.6.8)(dicom-parser@1.8.21)':
+  '@cornerstonejs/dicom-image-loader@5.6.8(@cornerstonejs/core@5.6.8(patch_hash=a80dc1a8df5e9e7fbfe0ad7ab6eff21acfca717ebb4cbb8a751cd61d51ab4da5)(@cornerstonejs/metadata@5.6.8)(@cornerstonejs/utils@5.6.8)(autoprefixer@10.6.1(postcss@8.5.26))(wslink@2.5.0))(@cornerstonejs/metadata@5.6.8)(dicom-parser@1.8.21)':
     dependencies:
       '@cornerstonejs/codec-charls': 1.2.3
       '@cornerstonejs/codec-libjpeg-turbo-8bit': 1.2.2
@@ -16532,7 +16537,7 @@ snapshots:
 
   '@icr/polyseg-wasm@0.4.0': {}
 
-  '@idc/gcp-extension@https://codeload.github.com/ImagingDataCommons/ohif-gcp-extension/tar.gz/e67addc5327241f0fe55ba700d76dc5eca934368(@ohif/app@platform+app)(@ohif/core@platform+core)(@ohif/extension-cornerstone@extensions+cornerstone)(@ohif/extension-default@extensions+default)(@ohif/i18n@platform+i18n)(@ohif/ui-next@platform+ui-next)(prop-types@15.8.1)(react-dom@18.3.1(react@18.3.1))(react-i18next@12.3.1(i18next@19.9.2)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-router-dom@6.30.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-router@6.30.3(react@18.3.1))(react@18.3.1)(webpack-merge@5.10.0)(webpack@5.105.0(@swc/core@1.16.13(@swc/helpers@0.5.23))(@swc/html@1.16.13)(clean-css@5.3.3)(cssnano@5.1.15(postcss@8.5.26))(csso@5.0.5)(html-minifier-terser@7.2.0)(lightningcss@1.33.0)(postcss@8.5.26))':
+  '@idc/gcp-extension@https://codeload.github.com/ImagingDataCommons/ohif-gcp-extension/tar.gz/89bc6a60cd82a38a8b602b2f4514b4aa898f91c9(@ohif/app@platform+app)(@ohif/core@platform+core)(@ohif/extension-cornerstone@extensions+cornerstone)(@ohif/extension-default@extensions+default)(@ohif/i18n@platform+i18n)(@ohif/ui-next@platform+ui-next)(prop-types@15.8.1)(react-dom@18.3.1(react@18.3.1))(react-i18next@12.3.1(i18next@19.9.2)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-router-dom@6.30.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-router@6.30.3(react@18.3.1))(react@18.3.1)(webpack-merge@5.10.0)(webpack@5.105.0(@swc/core@1.16.13(@swc/helpers@0.5.23))(@swc/html@1.16.13)(clean-css@5.3.3)(cssnano@5.1.15(postcss@8.5.26))(csso@5.0.5)(html-minifier-terser@7.2.0)(lightningcss@1.33.0)(postcss@8.5.26))':
     dependencies:
       '@babel/runtime': 7.29.7
       '@ohif/app': link:platform/app
@@ -16550,7 +16555,7 @@ snapshots:
       webpack: 5.105.0(@swc/core@1.16.13(@swc/helpers@0.5.23))(@swc/html@1.16.13)(clean-css@5.3.3)(cssnano@5.1.15(postcss@8.5.26))(csso@5.0.5)(html-minifier-terser@7.2.0)(lightningcss@1.33.0)(postcss@8.5.26)
       webpack-merge: 5.10.0
 
-  '@idc/gcp-extension@https://codeload.github.com/ImagingDataCommons/ohif-gcp-extension/tar.gz/e67addc5327241f0fe55ba700d76dc5eca934368(@ohif/app@platform+app)(@ohif/core@platform+core)(@ohif/extension-cornerstone@extensions+cornerstone)(@ohif/extension-default@extensions+default)(@ohif/i18n@platform+i18n)(@ohif/ui-next@platform+ui-next)(prop-types@15.8.1)(react-dom@18.3.1(react@18.3.1))(react-i18next@12.3.1(i18next@19.9.2)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-router-dom@6.30.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-router@6.30.3(react@18.3.1))(react@18.3.1)(webpack-merge@5.10.0)(webpack@5.105.0(@swc/core@1.16.13(@swc/helpers@0.5.23))(@swc/html@1.16.13)(clean-css@5.3.3)(cssnano@6.1.2(postcss@8.5.26))(csso@5.0.5)(html-minifier-terser@7.2.0)(lightningcss@1.33.0)(postcss@8.5.26))':
+  '@idc/gcp-extension@https://codeload.github.com/ImagingDataCommons/ohif-gcp-extension/tar.gz/89bc6a60cd82a38a8b602b2f4514b4aa898f91c9(@ohif/app@platform+app)(@ohif/core@platform+core)(@ohif/extension-cornerstone@extensions+cornerstone)(@ohif/extension-default@extensions+default)(@ohif/i18n@platform+i18n)(@ohif/ui-next@platform+ui-next)(prop-types@15.8.1)(react-dom@18.3.1(react@18.3.1))(react-i18next@12.3.1(i18next@19.9.2)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-router-dom@6.30.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-router@6.30.3(react@18.3.1))(react@18.3.1)(webpack-merge@5.10.0)(webpack@5.105.0(@swc/core@1.16.13(@swc/helpers@0.5.23))(@swc/html@1.16.13)(clean-css@5.3.3)(cssnano@6.1.2(postcss@8.5.26))(csso@5.0.5)(html-minifier-terser@7.2.0)(lightningcss@1.33.0)(postcss@8.5.26))':
     dependencies:
       '@babel/runtime': 7.29.7
       '@ohif/app': link:platform/app
@@ -16568,7 +16573,7 @@ snapshots:
       webpack: 5.105.0(@swc/core@1.16.13(@swc/helpers@0.5.23))(@swc/html@1.16.13)(clean-css@5.3.3)(cssnano@6.1.2(postcss@8.5.26))(csso@5.0.5)(html-minifier-terser@7.2.0)(lightningcss@1.33.0)(postcss@8.5.26)
       webpack-merge: 5.10.0
 
-  '@idc/gcp-mode@https://codeload.github.com/ImagingDataCommons/ohif-gcp-mode/tar.gz/15ebdabed8e6e25e420edd488fa54639c1581c4f(@ohif/core@platform+core)(@ohif/extension-cornerstone-dicom-pmap@extensions+cornerstone-dicom-pmap)(@ohif/extension-cornerstone-dicom-rt@extensions+cornerstone-dicom-rt)(@ohif/extension-cornerstone-dicom-seg@extensions+cornerstone-dicom-seg)(@ohif/extension-cornerstone-dicom-sr@extensions+cornerstone-dicom-sr)(@ohif/extension-cornerstone@extensions+cornerstone)(@ohif/extension-default@extensions+default)(@ohif/extension-dicom-pdf@extensions+dicom-pdf)(@ohif/extension-dicom-video@extensions+dicom-video)(@ohif/extension-measurement-tracking@extensions+measurement-tracking)':
+  '@idc/gcp-mode@https://codeload.github.com/ImagingDataCommons/ohif-gcp-mode/tar.gz/806b24cd31e94a01f9c1168cd560bff049cee6d6(@ohif/core@platform+core)(@ohif/extension-cornerstone-dicom-pmap@extensions+cornerstone-dicom-pmap)(@ohif/extension-cornerstone-dicom-rt@extensions+cornerstone-dicom-rt)(@ohif/extension-cornerstone-dicom-seg@extensions+cornerstone-dicom-seg)(@ohif/extension-cornerstone-dicom-sr@extensions+cornerstone-dicom-sr)(@ohif/extension-cornerstone@extensions+cornerstone)(@ohif/extension-default@extensions+default)(@ohif/extension-dicom-pdf@extensions+dicom-pdf)(@ohif/extension-dicom-video@extensions+dicom-video)(@ohif/extension-measurement-tracking@extensions+measurement-tracking)':
     dependencies:
       '@babel/runtime': 7.29.7
       '@ohif/core': link:platform/core
@@ -19000,8 +19005,8 @@ snapshots:
       react: 18.3.1
       react-is: 16.13.1
 
-  ajv-formats@3.0.1:
-    dependencies:
+  ajv-formats@3.0.1(ajv@8.20.0):
+    optionalDependencies:
       ajv: 8.20.0
 
   ajv-keywords@3.5.2(ajv@6.15.0):
@@ -26422,7 +26427,7 @@ snapshots:
     dependencies:
       '@types/json-schema': 7.0.15
       ajv: 8.20.0
-      ajv-formats: 3.0.1
+      ajv-formats: 3.0.1(ajv@8.20.0)
       ajv-keywords: 5.1.0(ajv@8.20.0)
 
   search-insights@2.17.3: {}
