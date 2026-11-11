@@ -109,6 +109,7 @@ Located in `patches/` directory:
   - `extensions/cornerstone/src/customizations/segmentationToolbarCustomization.ts`
   - `extensions/tmtv/src/customizations/toolbarCustomization.ts`
   - `modes/basic-test-mode/src/index.ts`
+- Mode validity when the server omits `ModalitiesInStudy` (ImagingDataCommons/ViewersV3#166): `resolveStudyModalities` in `src/utils/modeSelectorUtils.ts` uses the union of series already loaded in `DicomMetadataStore` and the series search. Before, with lazy study loading it saw only the first loaded series and disabled TMTV for PET/CT studies. #5987 has no series-search fallback at all yet; the port to #5987 is in progress.
 - The selector icon changed from `icon-list-view` to a new `icon-mode-switch`, because the old one looked like the DICOM tag browser icon (review comment on #5987). Files: `platform/ui-next/src/components/Icons/Sources/ModeSwitch.tsx`, `platform/ui-next/src/components/Icons/Icons.tsx`, `extensions/default/src/Toolbar/ToolbarModeSelector.tsx`. #5987 still uses `icon-list-view`.
 
 ### 3. SRPointTool (`extensions/cornerstone-dicom-sr/`)
@@ -316,6 +317,7 @@ Note: the IDC version uses `React.useMemo` in `SidePanelPreview.tsx`; the upstre
    - Keep only i18n customizations if any
    - Check that `'Mode'` is in the primary toolbar sections (basic, segmentation, tmtv); keep the IDC entries if upstream does not add them
    - Keep the IDC `icon-mode-switch` icon unless upstream adopts a distinct icon
+   - Check that upstream's mode validity uses series-search modalities when `ModalitiesInStudy` is missing (IDC #166); otherwise keep the IDC `resolveStudyModalities`
 
 2. **When #6331 (MergeDataSource) merges:**
    - Sync fork with upstream
