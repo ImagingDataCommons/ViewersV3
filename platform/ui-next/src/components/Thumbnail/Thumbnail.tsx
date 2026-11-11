@@ -30,6 +30,23 @@ const StaticThumbnailContent = ({ children }: any) => {
 };
 
 /**
+ * Marks a derived display set (SEG, RTSTRUCT, ...) that references the series
+ * shown in the active viewport.
+ */
+const ApplicableToActiveViewportIndicator = ({ className }: { className?: string }) => {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div data-cy="thumbnail-applicable-indicator">
+          <Icons.Link className={classnames('text-highlight', className)} />
+        </div>
+      </TooltipTrigger>
+      <TooltipContent side="right">References the series in the active viewport</TooltipContent>
+    </Tooltip>
+  );
+};
+
+/**
  * Display a thumbnail for a display set.
  */
 const Thumbnail = ({
@@ -52,6 +69,9 @@ const Thumbnail = ({
   viewPreset = 'thumbnails',
   isHydratedForDerivedDisplaySet = false,
   isTracked = false,
+  isApplicableToActiveViewport = false,
+  isShownInActiveViewport = false,
+  hasReferencedSeries = false,
   canReject = false,
   dragData = {},
   isDraggable = true,
@@ -66,6 +86,10 @@ const Thumbnail = ({
   useEffect(() => {
     setImageLoadFailed(false);
   }, [imageSrc]);
+
+  /** Derived display sets that do not reference the active viewport's series are dimmed */
+  const isNotApplicableToActiveViewport =
+    hasReferencedSeries && !isApplicableToActiveViewport && !isActive;
 
   const shouldRenderThumbnailImage = Boolean(imageSrc && !imageLoadFailed);
 
@@ -85,11 +109,12 @@ const Thumbnail = ({
       <div
         className={classnames(
           'flex h-full w-full flex-col items-center justify-center gap-[2px] p-[4px]',
-          isActive && 'bg-popover rounded'
+          isActive && !isShownInActiveViewport && 'bg-popover rounded',
+          isShownInActiveViewport && 'bg-accent rounded'
         )}
       >
         <div className="h-[114px] w-[128px]">
-          <div className="relative bg-background">
+          <div className="bg-background relative">
             {shouldRenderThumbnailImage ? (
               <img
                 src={imageSrc}
@@ -110,7 +135,11 @@ const Thumbnail = ({
               <div
                 className={classnames(
                   'h-[10px] w-[10px] rounded-[2px]',
-                  isActive || isHydratedForDerivedDisplaySet ? 'bg-highlight' : 'bg-primary/65',
+                  isShownInActiveViewport
+                    ? 'bg-green-500'
+                    : isActive || isHydratedForDerivedDisplaySet
+                      ? 'bg-highlight'
+                      : 'bg-primary/65',
                   loadingProgress && loadingProgress < 1 && 'bg-primary/25'
                 )}
               ></div>
@@ -128,6 +157,9 @@ const Thumbnail = ({
                 messages={messages}
                 id={`display-set-tooltip-${displaySetInstanceUID}`}
               />
+              {isApplicableToActiveViewport && (
+                <ApplicableToActiveViewportIndicator className="h-[20px] w-[20px]" />
+              )}
               {isTracked && (
                 <Tooltip>
                   <TooltipTrigger>
@@ -201,14 +233,19 @@ const Thumbnail = ({
       <div
         className={classnames(
           'flex h-full w-full items-center justify-between pr-[8px] pl-[8px] pt-[4px] pb-[4px]',
-          isActive && 'bg-popover rounded'
+          isActive && !isShownInActiveViewport && 'bg-popover rounded',
+          isShownInActiveViewport && 'bg-accent rounded'
         )}
       >
         <div className="relative flex h-[32px] w-full items-center gap-[8px] overflow-hidden">
           <div
             className={classnames(
               'h-[32px] w-[4px] min-w-[4px] rounded',
-              isActive || isHydratedForDerivedDisplaySet ? 'bg-highlight' : 'bg-primary/65',
+              isShownInActiveViewport
+                ? 'bg-green-500'
+                : isActive || isHydratedForDerivedDisplaySet
+                  ? 'bg-highlight'
+                  : 'bg-primary/65',
               loadingProgress && loadingProgress < 1 && 'bg-primary/25'
             )}
           ></div>
@@ -254,6 +291,9 @@ const Thumbnail = ({
             messages={messages}
             id={`display-set-tooltip-${displaySetInstanceUID}`}
           />
+          {isApplicableToActiveViewport && (
+            <ApplicableToActiveViewportIndicator className="h-[20px] w-[20px]" />
+          )}
           {isTracked && (
             <Tooltip>
               <TooltipTrigger>
@@ -298,6 +338,7 @@ const Thumbnail = ({
         'bg-muted group flex select-none flex-col rounded outline-none',
         isDraggable && 'hover:bg-primary/30 cursor-pointer',
         !isDraggable && 'cursor-default',
+        isNotApplicableToActiveViewport && 'opacity-50 hover:opacity-100',
         viewPreset === 'thumbnails' && 'h-[170px] w-[135px]',
         viewPreset === 'list' && 'h-[40px] w-full'
       )}
@@ -308,6 +349,8 @@ const Thumbnail = ({
           : 'study-browser-thumbnail'
       }
       data-series={seriesNumber}
+      data-applicable={hasReferencedSeries ? String(isApplicableToActiveViewport) : undefined}
+      data-shown={isShownInActiveViewport ? 'true' : undefined}
       onClick={onClick}
       onDoubleClick={onDoubleClick}
       onTouchEnd={handleTouchEnd}
@@ -357,6 +400,12 @@ Thumbnail.propTypes = {
   modality: PropTypes.string,
   isHydratedForDerivedDisplaySet: PropTypes.bool,
   isTracked: PropTypes.bool,
+  /** True when this derived display set references a series in the active viewport */
+  isApplicableToActiveViewport: PropTypes.bool,
+  /** True when this derived display set is shown as a segmentation on the active viewport */
+  isShownInActiveViewport: PropTypes.bool,
+  /** True when this display set references another series (SEG, RTSTRUCT, ...) */
+  hasReferencedSeries: PropTypes.bool,
   onClickUntrack: PropTypes.func,
   countIcon: PropTypes.string,
   isDraggable: PropTypes.bool,

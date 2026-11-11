@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useImageViewer } from '@ohif/ui-next';
 import { useSystem, utils } from '@ohif/core';
 import { useNavigate } from 'react-router-dom';
@@ -398,6 +398,43 @@ function PanelStudyBrowser({
 
   const activeDisplaySetInstanceUIDs = viewports.get(activeViewportId)?.displaySetInstanceUIDs;
 
+  /** Derived display sets (SEG, RTSTRUCT, ...) that reference the series shown in the active viewport */
+  const applicableDisplaySetInstanceUIDs = useMemo(
+    () =>
+      _getDisplaySetInstanceUIDsReferencingActive(displaySetService, activeDisplaySetInstanceUIDs),
+    [displaySetService, activeDisplaySetInstanceUIDs, displaySets]
+  );
+
+  /** Derived display sets (SEG, RTSTRUCT, ...) currently shown as segmentations on the active viewport */
+  const [shownDisplaySetInstanceUIDs, setShownDisplaySetInstanceUIDs] = useState<string[]>([]);
+
+  useEffect(() => {
+    const { segmentationService } = servicesManager.services;
+    if (!segmentationService) {
+      return;
+    }
+
+    const updateShown = () => {
+      const shown = _getSegmentationsShownInViewport(segmentationService, activeViewportId);
+      setShownDisplaySetInstanceUIDs(prev =>
+        prev.length === shown.length && prev.every(uid => shown.includes(uid)) ? prev : shown
+      );
+    };
+
+    updateShown();
+
+    const { EVENTS } = segmentationService;
+    const subscriptions = [
+      EVENTS.SEGMENTATION_REPRESENTATION_MODIFIED,
+      EVENTS.SEGMENTATION_REPRESENTATION_REMOVED,
+      EVENTS.SEGMENTATION_REMOVED,
+    ].map(event => segmentationService.subscribe(event, updateShown));
+
+    return () => {
+      subscriptions.forEach(({ unsubscribe }) => unsubscribe());
+    };
+  }, [servicesManager, activeViewportId, activeDisplaySetInstanceUIDs]);
+
   return (
     <>
       <>
@@ -427,6 +464,8 @@ function PanelStudyBrowser({
         onClickThumbnail={() => {}}
         onDoubleClickThumbnail={onDoubleClickThumbnailHandler}
         activeDisplaySetInstanceUIDs={activeDisplaySetInstanceUIDs}
+        applicableDisplaySetInstanceUIDs={applicableDisplaySetInstanceUIDs}
+        shownDisplaySetInstanceUIDs={shownDisplaySetInstanceUIDs}
         showSettings={actionIcons.find(icon => icon.id === 'settings')?.value}
         viewPresets={viewPresets}
         ThumbnailMenuItems={MoreDropdownMenu({
@@ -501,10 +540,63 @@ function _mapDisplaySets(displaySets, displaySetLoadingState, thumbnailImageSrcM
           // .. Any other data to pass
         },
         isHydratedForDerivedDisplaySet: ds.isHydrated,
+        hasReferencedSeries: Boolean(
+          ds.referencedDisplaySetInstanceUID || ds.referencedSeriesInstanceUID
+        ),
       });
     });
 
   return [...thumbnailDisplaySets, ...thumbnailNoImageDisplaySets];
+}
+
+/**
+ * Returns the UIDs of derived display sets (SEG, RTSTRUCT, PMAP, ...) whose
+ * referenced series is displayed in the active viewport. Matches on the
+ * referenced display set UID, falling back to the referenced SeriesInstanceUID
+ * since the display set reference may be resolved after the thumbnail is mapped.
+ */
+function _getDisplaySetInstanceUIDsReferencingActive(
+  displaySetService,
+  activeDisplaySetInstanceUIDs: string[] = []
+): string[] {
+  if (!activeDisplaySetInstanceUIDs.length) {
+    return [];
+  }
+
+  const activeSeriesInstanceUIDs = new Set(
+    activeDisplaySetInstanceUIDs
+      .map(uid => displaySetService.getDisplaySetByUID(uid)?.SeriesInstanceUID)
+      .filter(Boolean)
+  );
+
+  return displaySetService
+    .getActiveDisplaySets()
+    .filter(
+      ds =>
+        activeDisplaySetInstanceUIDs.includes(ds.referencedDisplaySetInstanceUID) ||
+        activeSeriesInstanceUIDs.has(ds.referencedSeriesInstanceUID)
+    )
+    .map(ds => ds.displaySetInstanceUID);
+}
+
+/**
+ * Returns the UIDs of segmentations (SEG, RTSTRUCT, ...) visible on the given
+ * viewport. A loaded segmentation's id is its display set instance UID.
+ */
+function _getSegmentationsShownInViewport(segmentationService, viewportId: string): string[] {
+  if (!viewportId) {
+    return [];
+  }
+
+  try {
+    return segmentationService
+      .getSegmentationRepresentations(viewportId)
+      .filter(representation => representation.visible !== false)
+      .map(representation => representation.segmentationId);
+  } catch (error) {
+    /** A representation can be listed briefly after its segmentation is removed */
+    return [];
+  }
 }
 
 function _getComponentType(ds) {
