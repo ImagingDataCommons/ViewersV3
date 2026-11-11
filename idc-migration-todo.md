@@ -36,14 +36,15 @@ This document tracks the migration status and documents all IDC-specific changes
 | [#6335](https://github.com/OHIF/Viewers/pull/6335) | feat(cornerstone-dicom-sr): add SRPoint tool | 🟡 OPEN | SRPointTool for DICOM SR point annotations |
 | [#6419](https://github.com/OHIF/Viewers/pull/6419) | fix(worklist): show launch workflows when the server omits modalities | 🟡 OPEN | Study list workflows when ModalitiesInStudy is missing (IDC: ImagingDataCommons/ViewersV3#164) |
 | [#6353](https://github.com/OHIF/Viewers/pull/6353) | fix(ui): respect panelMeasurement.disableEditing in MeasurementsMenu | 🟡 OPEN | Hide delete/actions when measurement editing is disabled (IDC: ImagingDataCommons/ViewersV3#154) |
+| [#6420](https://github.com/OHIF/Viewers/pull/6420) | fix(cornerstone-dicom-sr): show SR finding labels and draw SR points as crosses | 🟡 OPEN, stacked on #6335 | SR finding labels, cross previews for SR points, SRPoint / SRRectangleROI in mode tool groups (rest of #5858) |
 | [#6354](https://github.com/OHIF/Viewers/pull/6354) | fix(sr): improve SR annotation visibility toggle | 🟡 OPEN | Visibility toggle for SR preview annotations (IDC: ImagingDataCommons/ViewersV3#154) |
-| [#5858](https://github.com/OHIF/Viewers/pull/5858) | fix: Add SRPoint and SRRectangleROI sub-types | 🟠 OPEN, to be closed | Original SR sub-types PR. Superseded by #6335 (SRPoint tool) and a follow-up PR from `fix/sr-finding-labels` (SR finding labels, point preview crosses, SR sub-types in tool groups), which stacks on #6335 |
+| [#5858](https://github.com/OHIF/Viewers/pull/5858) | fix: Add SRPoint and SRRectangleROI sub-types | 🔴 CLOSED (2026-11-11) | Original SR sub-types PR. Replaced by #6335 (SRPoint tool) and #6420 (SR finding labels, point preview crosses, SR sub-types in tool groups) |
 
 Not tracked here: #6392 and #6393 are upstream-only fixes that the IDC fork does not carry.
 
 ### Upstream PR Health (checked 2026-11-11)
 
-All open OHIF PRs above except #5858 merge cleanly into OHIF `master` and pass master's lint and React Compiler gates.
+All open OHIF PRs above merge cleanly into OHIF `master` and pass master's lint and React Compiler gates.
 
 | PR | Review | Notes |
 |----|--------|-------|
@@ -51,7 +52,8 @@ All open OHIF PRs above except #5858 merge cleanly into OHIF `master` and pass m
 | #6331, #6333, #6353, #6354 | Review required | Up to date with master; CI green |
 | #6335 | Review required | Up to date with master; earlier Playwright failure was in unrelated screenshot tests |
 | #6419 | Review required | Opened 2026-11-11 on current master |
-| #5858 | Review required | Conflicts with master in 32 files. Its remaining changes moved to the `fix/sr-finding-labels` follow-up; close #5858 once that PR is open |
+| #6420 | Review required | Opened 2026-11-11, stacked on #6335; its diff shows #6335's commits until #6335 merges. Playwright SR preview screenshots may need updating |
+| #5858 | Closed | Replaced by #6335 and #6420 |
 | CS3D #2856 | Changes requested | Not ours (author: daker); conflicts with CS3D main. IDC keeps `@cornerstonejs__core.patch` |
 
 ### Cornerstone3D PRs
@@ -132,7 +134,7 @@ Located in `patches/` directory:
 - The selector icon changed from `icon-list-view` to a new `icon-mode-switch`, because the old one looked like the DICOM tag browser icon (review comment on #5987). Files: `platform/ui-next/src/components/Icons/Sources/ModeSwitch.tsx`, `platform/ui-next/src/components/Icons/Icons.tsx`, `extensions/default/src/Toolbar/ToolbarModeSelector.tsx`. #5987 still uses `icon-list-view`.
 
 ### 3. SRPointTool and SR Finding Labels (`extensions/cornerstone-dicom-sr/`, `modes/`)
-**Status:** PR [#6335](https://github.com/OHIF/Viewers/pull/6335) open; follow-up PR from `fix/sr-finding-labels` (stacked on #6335) for the rest
+**Status:** PR [#6335](https://github.com/OHIF/Viewers/pull/6335) open; [#6420](https://github.com/OHIF/Viewers/pull/6420) (stacked on #6335) for the rest
 
 | File | Purpose | Upstream PR |
 |------|---------|-------------|
@@ -141,11 +143,11 @@ Located in `patches/` directory:
 | `src/utils/srToolGetTextLines.ts` | SR-specific text line generation | #6335 |
 | `src/utils/getLabelForSRMeasurement.js` | Label extraction from SR measurements | #6335 |
 | `src/init.ts` | Tool registration (modified) | #6335 |
-| `src/utils/getLabelFromDCMJSImportedToolData.js` | Fall back to the coded Finding's CodeMeaning (modified) | follow-up |
-| `src/utils/addSRAnnotation.ts` | Preview label from getLabelForSRMeasurement; preview is locked (modified) | follow-up |
-| `src/tools/DICOMSRDisplayTool.ts` | Cross rendering for preview points, finding label in the text box (modified) | follow-up |
-| `src/getSopClassHandlerModule.ts` | Keep Finding / Finding Site concepts; finding site label (modified) | follow-up |
-| `modes/basic`, `modes/basic-test-mode`, `modes/usAnnotation` `initToolGroups` | SRPoint / SRRectangleROI in the default, SR and MPR tool groups | follow-up |
+| `src/utils/getLabelFromDCMJSImportedToolData.js` | Fall back to the coded Finding's CodeMeaning (modified) | #6420 |
+| `src/utils/addSRAnnotation.ts` | Preview label from getLabelForSRMeasurement; preview is locked (modified) | #6420 |
+| `src/tools/DICOMSRDisplayTool.ts` | Cross rendering for preview points, finding label in the text box (modified) | #6420 |
+| `src/getSopClassHandlerModule.ts` | Keep Finding / Finding Site concepts; finding site label (modified) | #6420 |
+| `modes/basic`, `modes/basic-test-mode`, `modes/usAnnotation` `initToolGroups` | SRPoint / SRRectangleROI in the default, SR and MPR tool groups | #6420 |
 
 ### 4. MergeDataSource Enhancements (`extensions/default/`)
 **Status:** PR [#6331](https://github.com/OHIF/Viewers/pull/6331) open
@@ -360,9 +362,9 @@ Note: the IDC version uses `React.useMemo` in `SidePanelPreview.tsx`; the upstre
    - Sync fork with upstream
    - Remove IDC-specific SEG loading changes
 
-4. **When #6335 (SRPointTool) and its follow-up (`fix/sr-finding-labels`) merge:**
+4. **When #6335 (SRPointTool) and #6420 (SR finding labels) merge:**
    - Sync fork with upstream
-   - Remove IDC-specific SRPoint files after #6335; the label, preview and tool group changes after the follow-up
+   - Remove IDC-specific SRPoint files after #6335; the label, preview and tool group changes after #6420
    - Keep the `onBeforeSRHydration` remap in the IDC configs (it is configuration, not a code change)
 
 5. **When CS3D #2856 (VOI LUT) merges:**
