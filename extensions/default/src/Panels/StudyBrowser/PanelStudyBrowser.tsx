@@ -6,6 +6,7 @@ import { useViewportGrid, StudyBrowser, Separator } from '@ohif/ui-next';
 import { PanelStudyBrowserHeader } from './PanelStudyBrowserHeader';
 import { defaultActionIcons } from './constants';
 import MoreDropdownMenu from '../../Components/MoreDropdownMenu';
+import getReferencedSeriesInstanceUIDs from '../../utils/getReferencedSeriesInstanceUIDs';
 import { CallbackCustomization } from 'platform/core/src/types';
 import { type TabsProps } from '@ohif/core/src/utils/createStudyBrowserTabs';
 import { thumbnailNoImageModalities } from '@ohif/core/src/utils/thumbnailNoImageModalities';
@@ -540,9 +541,9 @@ function _mapDisplaySets(displaySets, displaySetLoadingState, thumbnailImageSrcM
           // .. Any other data to pass
         },
         isHydratedForDerivedDisplaySet: ds.isHydrated,
-        hasReferencedSeries: Boolean(
-          ds.referencedDisplaySetInstanceUID || ds.referencedSeriesInstanceUID
-        ),
+        hasReferencedSeries:
+          Boolean(ds.referencedDisplaySetInstanceUID) ||
+          getReferencedSeriesInstanceUIDs(ds, displaySets).length > 0,
       });
     });
 
@@ -554,6 +555,8 @@ function _mapDisplaySets(displaySets, displaySetLoadingState, thumbnailImageSrcM
  * referenced series is displayed in the active viewport. Matches on the
  * referenced display set UID, falling back to the referenced SeriesInstanceUID
  * since the display set reference may be resolved after the thumbnail is mapped.
+ * Measurement SRs without an image series reference are resolved through the
+ * segmentation they were computed from.
  */
 function _getDisplaySetInstanceUIDsReferencingActive(
   displaySetService,
@@ -569,12 +572,15 @@ function _getDisplaySetInstanceUIDsReferencingActive(
       .filter(Boolean)
   );
 
-  return displaySetService
-    .getActiveDisplaySets()
+  const displaySets = displaySetService.getActiveDisplaySets();
+
+  return displaySets
     .filter(
       ds =>
         activeDisplaySetInstanceUIDs.includes(ds.referencedDisplaySetInstanceUID) ||
-        activeSeriesInstanceUIDs.has(ds.referencedSeriesInstanceUID)
+        getReferencedSeriesInstanceUIDs(ds, displaySets).some(uid =>
+          activeSeriesInstanceUIDs.has(uid)
+        )
     )
     .map(ds => ds.displaySetInstanceUID);
 }
