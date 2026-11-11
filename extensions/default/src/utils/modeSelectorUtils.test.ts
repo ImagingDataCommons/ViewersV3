@@ -72,7 +72,7 @@ describe('modeSelectorUtils', () => {
       expect(dataSource.query.series.search).toHaveBeenCalledWith('1.2.3');
     });
 
-    it('prefers loaded metadata over series search when study modalities are missing', async () => {
+    it('merges loaded metadata with series search when study modalities are missing', async () => {
       DicomMetadataStore.getStudy.mockReturnValue({
         series: [
           {
@@ -87,15 +87,57 @@ describe('modeSelectorUtils', () => {
       const dataSource = {
         query: {
           series: {
-            search: jest.fn(),
+            search: jest.fn().mockResolvedValue([{ modality: 'CT' }, { modality: 'SR' }]),
           },
         },
       };
 
       const result = await resolveStudyModalities('1.2.3', dataSource, '');
 
+      expect(result).toBe('CT\\PT\\SR');
+    });
+
+    it('uses series search when only some series are loaded (lazy study loading)', async () => {
+      DicomMetadataStore.getStudy.mockReturnValue({
+        series: [
+          {
+            instances: [{ Modality: 'SEG' }],
+          },
+        ],
+      });
+
+      const dataSource = {
+        query: {
+          series: {
+            search: jest.fn().mockResolvedValue([
+              { modality: 'PT' },
+              { modality: 'CT' },
+              { modality: 'SEG' },
+            ]),
+          },
+        },
+      };
+
+      const result = await resolveStudyModalities('1.2.3', dataSource, '');
+
+      expect(result).toBe('CT\\PT\\SEG');
+    });
+
+    it('uses loaded metadata when the data source has no series search', async () => {
+      DicomMetadataStore.getStudy.mockReturnValue({
+        series: [
+          {
+            instances: [{ Modality: 'PT' }],
+          },
+          {
+            instances: [{ Modality: 'CT' }],
+          },
+        ],
+      });
+
+      const result = await resolveStudyModalities('1.2.3', null, '');
+
       expect(result).toBe('CT\\PT');
-      expect(dataSource.query.series.search).not.toHaveBeenCalled();
     });
   });
 

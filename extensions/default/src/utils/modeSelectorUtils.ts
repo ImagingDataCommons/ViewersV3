@@ -131,7 +131,9 @@ export async function modalitiesFromSeriesSearch(
 }
 
 /**
- * Resolves modalities for mode validity: QIDO study field, then loaded metadata, then series QIDO.
+ * Resolves modalities for mode validity: the QIDO study field when present, otherwise the union of
+ * loaded metadata and series QIDO. Loaded metadata alone is not enough, because with lazy study
+ * loading only some series may be in `DicomMetadataStore` when the selector evaluates modes.
  */
 export async function resolveStudyModalities(
   studyInstanceUID: string,
@@ -143,16 +145,18 @@ export async function resolveStudyModalities(
   }
 
   const fromMetadataStore = modalitiesFromMetadataStore(studyInstanceUID);
-  if (hasUsableModalities(fromMetadataStore)) {
-    return fromMetadataStore;
-  }
-
   const fromSeriesSearch = await modalitiesFromSeriesSearch(studyInstanceUID, dataSource);
-  if (hasUsableModalities(fromSeriesSearch)) {
-    return fromSeriesSearch;
-  }
 
-  return '';
+  const modalitySet = new Set<string>();
+  [fromMetadataStore, fromSeriesSearch].forEach(modalities => {
+    normalizeModalitiesString(modalities)
+      .split('\\')
+      .map(token => token.trim())
+      .filter(Boolean)
+      .forEach(token => modalitySet.add(token));
+  });
+
+  return modalitiesStringFromSet(modalitySet);
 }
 
 function buildStudyEnvelopeFromMetadataStore(studyInstanceUID: string): StudyEnvelope | null {
