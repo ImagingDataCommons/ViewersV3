@@ -16,16 +16,58 @@ const rowStyle = {
 };
 const indentationPadding = 8;
 
+/**
+ * Renders the text with every case-insensitive occurrence of the highlight value marked.
+ */
+function HighlightedText({ text, highlight }: { text: string; highlight?: string }) {
+  if (!highlight || !text) {
+    return <>{text}</>;
+  }
+
+  const textLowerCase = text.toLowerCase();
+  const highlightLowerCase = highlight.toLowerCase();
+  const parts: React.ReactNode[] = [];
+  let start = 0;
+  let matchIndex = textLowerCase.indexOf(highlightLowerCase);
+
+  while (matchIndex !== -1) {
+    if (matchIndex > start) {
+      parts.push(text.slice(start, matchIndex));
+    }
+    const end = matchIndex + highlight.length;
+    parts.push(
+      <mark
+        key={matchIndex}
+        className="bg-highlight/40 text-foreground rounded-sm"
+      >
+        {text.slice(matchIndex, end)}
+      </mark>
+    );
+    start = end;
+    matchIndex = textLowerCase.indexOf(highlightLowerCase, start);
+  }
+
+  if (start < text.length) {
+    parts.push(text.slice(start));
+  }
+
+  return <>{parts}</>;
+}
+
 const RowComponent = ({
   row,
   style,
   keyPrefix,
   onToggle,
+  highlightValue,
+  isActive,
 }: {
   row: Row;
   style: any;
   keyPrefix: string;
   onToggle?: (areChildrenVisible: boolean) => void;
+  highlightValue?: string;
+  isActive?: boolean;
 }) => {
   const handleToggle = useCallback(() => {
     onToggle(!row.areChildrenVisible);
@@ -39,9 +81,11 @@ const RowComponent = ({
     <div
       style={{ ...style, ...rowStyle }}
       className={classNames(
-        'hover:bg-primary/25 border-input text-foreground flex w-full flex-row items-center break-all bg-background text-base',
+        'hover:bg-primary/25 border-input text-foreground flex w-full flex-row items-center break-all text-base',
+        isActive ? 'bg-primary/30' : 'bg-background',
         lineHeightClassName
       )}
+      data-cy={isActive ? 'dicom-tag-active-match' : undefined}
       key={keyPrefix}
     >
       {isChildOrParent && (
@@ -63,10 +107,30 @@ const RowComponent = ({
           )}
         </div>
       )}
-      <div className="w-4/24 px-3">{row.tag}</div>
-      <div className="w-2/24 px-3">{row.valueRepresentation}</div>
-      <div className="w-6/24 px-3">{row.keyword}</div>
-      <div className="w-5/24 grow px-3">{row.value}</div>
+      <div className="w-4/24 px-3">
+        <HighlightedText
+          text={row.tag}
+          highlight={highlightValue}
+        />
+      </div>
+      <div className="w-2/24 px-3">
+        <HighlightedText
+          text={row.valueRepresentation}
+          highlight={highlightValue}
+        />
+      </div>
+      <div className="w-6/24 px-3">
+        <HighlightedText
+          text={row.keyword}
+          highlight={highlightValue}
+        />
+      </div>
+      <div className="w-5/24 grow px-3">
+        <HighlightedText
+          text={row.value}
+          highlight={highlightValue}
+        />
+      </div>
     </div>
   );
 };
@@ -112,7 +176,15 @@ function ColumnHeaders({ tagRef, vrRef, keywordRef, valueRef }) {
     </div>
   );
 }
-function DicomTagTable({ rows }: { rows: Row[] }) {
+function DicomTagTable({
+  rows,
+  highlightValue,
+  activeRowUid,
+}: {
+  rows: Row[];
+  highlightValue?: string;
+  activeRowUid?: string;
+}) {
   const listRef = useRef();
   const canvasRef = useRef();
 
@@ -121,6 +193,17 @@ function DicomTagTable({ rows }: { rows: Row[] }) {
   const [keywordHeaderElem, setKeywordHeaderElem] = useState(null);
   const [valueHeaderElem, setValueHeaderElem] = useState(null);
   const [internalRows, setInternalRows] = useState(rows);
+  const [prevRows, setPrevRows] = useState(rows);
+  const pendingScrollRowUidRef = useRef<string>(undefined);
+
+  /**
+   * Sync the internal rows during render (rather than in an effect) so that effects
+   * below never observe internal rows that are stale relative to the rows prop.
+   */
+  if (rows !== prevRows) {
+    setPrevRows(rows);
+    setInternalRows(rows);
+  }
 
   // Here the refs are inturn stored in state to trigger a render of the table.
   // This virtualized table does NOT render until the header is rendered because the header column widths are used to determine the row heights in the table.
@@ -145,10 +228,6 @@ function DicomTagTable({ rows }: { rows: Row[] }) {
       setValueHeaderElem(elem);
     }
   };
-
-  useEffect(() => {
-    setInternalRows(rows);
-  }, [rows]);
 
   const visibleRows = useMemo(() => {
     return internalRows.filter(row => row.isVisible);
@@ -220,6 +299,55 @@ function DicomTagTable({ rows }: { rows: Row[] }) {
     [getOneRowHeight]
   );
 
+  useEffect(() => {
+    pendingScrollRowUidRef.current = activeRowUid;
+  }, [activeRowUid]);
+
+  /**
+   * Bring the active row into view: first expand any collapsed ancestor sequence/item,
+   * then (once the expanded rows are rendered) scroll the row to the center of the list.
+   */
+  useEffect(() => {
+    const uid = pendingScrollRowUidRef.current;
+    if (!uid || !listRef?.current) {
+      return;
+    }
+
+    const rowsByUid = new Map(internalRows.map(internalRow => [internalRow.uid, internalRow]));
+    const activeRow = rowsByUid.get(uid);
+    if (!activeRow) {
+      return;
+    }
+
+    const collapsedAncestor = activeRow.parents
+      ?.map(parentUid => rowsByUid.get(parentUid))
+      .find(parentRow => parentRow && !parentRow.areChildrenVisible);
+
+    if (collapsedAncestor) {
+      setInternalRows(
+        internalRows.map(internalRow => {
+          if (internalRow.uid === collapsedAncestor.uid) {
+            return { ...internalRow, areChildrenVisible: true };
+          }
+          if (collapsedAncestor.children.includes(internalRow.uid)) {
+            return { ...internalRow, isVisible: true, areChildrenVisible: true };
+          }
+          return internalRow;
+        })
+      );
+      return;
+    }
+
+    const index = visibleRows.findIndex(visibleRow => visibleRow.uid === uid);
+    if (index === -1) {
+      return;
+    }
+
+    pendingScrollRowUidRef.current = undefined;
+    listRef.current.resetAfterIndex(0);
+    listRef.current.scrollToItem(index, 'center');
+  }, [activeRowUid, internalRows, visibleRows, tagHeaderElem]);
+
   const onToggle = useCallback(
     sourceRow => {
       if (!sourceRow.children) {
@@ -255,10 +383,12 @@ function DicomTagTable({ rows }: { rows: Row[] }) {
             row={row}
             keyPrefix={`DICOMTagRow-${index}`}
             onToggle={onToggle(row)}
+            highlightValue={highlightValue}
+            isActive={!!activeRowUid && row.uid === activeRowUid}
           />
         );
       },
-    [onToggle]
+    [onToggle, highlightValue, activeRowUid]
   );
 
   /**
@@ -281,7 +411,7 @@ function DicomTagTable({ rows }: { rows: Row[] }) {
         valueRef={valueRef}
       />
       <div
-        className="relative m-auto border-2 border-background bg-background"
+        className="border-background bg-background relative m-auto border-2"
         style={{ height: '32rem' }}
       >
         {isHeaderRendered() && (
