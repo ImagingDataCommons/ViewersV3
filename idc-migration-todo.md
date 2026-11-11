@@ -20,6 +20,7 @@ This document tracks the migration status and documents all IDC-specific changes
 | GCP Mode | ✅ Updated for OHIF 3.13 |
 | SEG Loading | ✅ Buffer-based fallback + PR opened |
 | Study List Workflows | ✅ Fixed for servers without ModalitiesInStudy + PR open |
+| SR Visibility / Editing Controls | ✅ Fixed in IDC + PRs open |
 
 ---
 
@@ -34,6 +35,24 @@ This document tracks the migration status and documents all IDC-specific changes
 | [#6333](https://github.com/OHIF/Viewers/pull/6333) | fix(seg): fallback to buffer-based loader when PerFrameFunctionalGroupsSequence is missing | 🟡 OPEN | SEG metadata fallback + bulk data fetch |
 | [#6335](https://github.com/OHIF/Viewers/pull/6335) | feat(cornerstone-dicom-sr): add SRPoint tool | 🟡 OPEN | SRPointTool for DICOM SR point annotations |
 | [#6419](https://github.com/OHIF/Viewers/pull/6419) | fix(worklist): show launch workflows when the server omits modalities | 🟡 OPEN | Study list workflows when ModalitiesInStudy is missing (IDC: ImagingDataCommons/ViewersV3#164) |
+| [#6353](https://github.com/OHIF/Viewers/pull/6353) | fix(ui): respect panelMeasurement.disableEditing in MeasurementsMenu | 🟡 OPEN | Hide delete/actions when measurement editing is disabled (IDC: ImagingDataCommons/ViewersV3#154) |
+| [#6354](https://github.com/OHIF/Viewers/pull/6354) | fix(sr): improve SR annotation visibility toggle | 🟡 OPEN | Visibility toggle for SR preview annotations (IDC: ImagingDataCommons/ViewersV3#154) |
+| [#5858](https://github.com/OHIF/Viewers/pull/5858) | fix: Add SRPoint and SRRectangleROI sub-types | 🟠 OPEN, conflicts with master | Original SR sub-types PR; the SRPoint tool part was split out into #6335. Rebase or close in favor of #6335 + #6354 |
+
+Not tracked here: #6392 and #6393 are upstream-only fixes that the IDC fork does not carry.
+
+### Upstream PR Health (checked 2026-11-11)
+
+All OHIF PRs above except #5858 merge cleanly into OHIF `master` and pass master's lint and React Compiler gates.
+
+| PR | Review | Notes |
+|----|--------|-------|
+| #5987 | Changes requested (2026-04-29) | Branch brought up to date with master; fixed the build (`preserveKeys` import), moved `ToolbarModeSelector` to React 19 / React Compiler rules, added the series-search modality fallback. Re-request review once CI is green |
+| #6331, #6333, #6353, #6354 | Review required | Up to date with master; CI green |
+| #6335 | Review required | Up to date with master; earlier Playwright failure was in unrelated screenshot tests |
+| #6419 | Review required | Opened 2026-11-11 on current master |
+| #5858 | Review required | Conflicts with master in 32 files; needs a rebase or closing |
+| CS3D #2856 | Changes requested | Not ours (author: daker); conflicts with CS3D main. IDC keeps `@cornerstonejs__core.patch` |
 
 ### Cornerstone3D PRs
 
@@ -59,7 +78,7 @@ Located in `patches/` directory:
 - **Purpose:** Index segments by SegmentNumber for LABELMAP support
 - **Upstream PR:** [CS3D #2882](https://github.com/cornerstonejs/cornerstone3D/pull/2882)
 - **What it does:** Fixes segment color mapping for LABELMAP segmentations where SegmentNumber may start at 0 or have gaps
-- **Remove when:** PR #2882 is merged and CS3D version is updated
+- **Remove when:** IDC moves to Cornerstone3D v5.8.7 or later (PR #2882 merged 2026-09-01)
 
 ### SEG PerFrameFunctionalGroupsSequence Fallback
 - **Location:** `extensions/cornerstone-dicom-seg/src/getSopClassHandlerModule.ts`
@@ -260,6 +279,19 @@ Note: the IDC version uses `React.useMemo` in `SidePanelPreview.tsx`; the upstre
 
 ---
 
+### 16. SR Visibility and Editing Controls (`extensions/cornerstone/`, `extensions/cornerstone-dicom-sr/`)
+**Status:** IDC fix in ImagingDataCommons/ViewersV3#154; upstream PRs [#6353](https://github.com/OHIF/Viewers/pull/6353) and [#6354](https://github.com/OHIF/Viewers/pull/6354) open
+
+| File | Purpose | Upstream PR |
+|------|---------|-------------|
+| `extensions/cornerstone/src/components/MeasurementsMenu.tsx` | Respect `panelMeasurement.disableEditing` | #6353 |
+| `extensions/cornerstone/src/commandsModule.ts` | `toggleVisibilityMeasurement` handles SR preview annotations | #6354 |
+| `extensions/cornerstone-dicom-sr/src/tools/DICOMSRDisplayTool.ts` | Skip hidden annotations when rendering | #6354 |
+| `extensions/cornerstone-dicom-sr/src/tools/modules/dicomSRModule.js` | `clearTrackingUniqueIdentifiersForElement` | #6354 |
+| `platform/app/public/config/*.js`, `idc-assets/app-config-template.js` | `onBeforeSRHydration` remaps Probe → SRPoint and RectangleROI → SRRectangleROI | IDC config |
+
+---
+
 ## Verification Checklist
 
 ### Critical (Must Test Before Merge)
@@ -317,7 +349,7 @@ Note: the IDC version uses `React.useMemo` in `SidePanelPreview.tsx`; the upstre
    - Keep only i18n customizations if any
    - Check that `'Mode'` is in the primary toolbar sections (basic, segmentation, tmtv); keep the IDC entries if upstream does not add them
    - Keep the IDC `icon-mode-switch` icon unless upstream adopts a distinct icon
-   - Check that upstream's mode validity uses series-search modalities when `ModalitiesInStudy` is missing (IDC #166); otherwise keep the IDC `resolveStudyModalities`
+   - #5987 now carries the series-search modality fallback (IDC #166), so the IDC `resolveStudyModalities` can go with the rest of the mode selector files
 
 2. **When #6331 (MergeDataSource) merges:**
    - Sync fork with upstream
@@ -342,6 +374,15 @@ Note: the IDC version uses `React.useMemo` in `SidePanelPreview.tsx`; the upstre
 7. **When #6419 (study list workflows without ModalitiesInStudy) merges:**
    - Sync fork with upstream
    - Drop the IDC changes in `WorkflowsProvider.tsx` and `SidePanelPreview.tsx` (ImagingDataCommons/ViewersV3#164) in favor of upstream's
+
+8. **When #6353 (MeasurementsMenu disableEditing) merges:**
+   - Sync fork with upstream
+   - Drop the IDC `MeasurementsMenu.tsx` change
+
+9. **When #6354 (SR visibility toggle) merges:**
+   - Sync fork with upstream
+   - Drop the IDC changes in `commandsModule.ts`, `DICOMSRDisplayTool.ts` and `dicomSRModule.js`
+   - Keep the `onBeforeSRHydration` config entries; they are IDC configuration
 
 ### Final Cleanup
 
