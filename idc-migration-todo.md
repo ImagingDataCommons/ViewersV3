@@ -21,6 +21,7 @@ This document tracks the migration status and documents all IDC-specific changes
 | SEG Loading | ✅ Buffer-based fallback + PR opened |
 | Study List Workflows | ✅ Fixed for servers without ModalitiesInStudy + PR open |
 | SR Visibility / Editing Controls | ✅ Fixed in IDC + PRs open |
+| DICOM Tag Browser | 🟡 Show-all search + item collapse fix in IDC PR ImagingDataCommons/ViewersV3#158; collapse fix PR open upstream |
 
 ---
 
@@ -38,6 +39,7 @@ This document tracks the migration status and documents all IDC-specific changes
 | [#6353](https://github.com/OHIF/Viewers/pull/6353) | fix(ui): respect panelMeasurement.disableEditing in MeasurementsMenu | 🟡 OPEN | Hide delete/actions when measurement editing is disabled (IDC: ImagingDataCommons/ViewersV3#154) |
 | [#6420](https://github.com/OHIF/Viewers/pull/6420) | fix(cornerstone-dicom-sr): show SR finding labels and draw SR points as crosses | 🟡 OPEN, stacked on #6335 | SR finding labels, cross previews for SR points, SRPoint / SRRectangleROI in mode tool groups (rest of #5858) |
 | [#6354](https://github.com/OHIF/Viewers/pull/6354) | fix(sr): improve SR annotation visibility toggle | 🟡 OPEN | Visibility toggle for SR preview annotations (IDC: ImagingDataCommons/ViewersV3#154) |
+| [#6421](https://github.com/OHIF/Viewers/pull/6421) | fix(DicomTagBrowser): collapse sequence items with all their tags | 🟡 OPEN | Collapsing an "Item #n" row now hides its tags (IDC: ImagingDataCommons/ViewersV3#158) |
 | [#5858](https://github.com/OHIF/Viewers/pull/5858) | fix: Add SRPoint and SRRectangleROI sub-types | 🔴 CLOSED (2026-11-11) | Original SR sub-types PR. Replaced by #6335 (SRPoint tool) and #6420 (SR finding labels, point preview crosses, SR sub-types in tool groups) |
 
 Not tracked here: #6392 and #6393 are upstream-only fixes that the IDC fork does not carry.
@@ -53,6 +55,7 @@ All open OHIF PRs above merge cleanly into OHIF `master` and pass master's lint 
 | #6335 | Review required | Up to date with master; Playwright rerunning (the earlier failure was in unrelated screenshot tests) |
 | #6419 | Review required | Opened 2026-11-11 on current master |
 | #6420 | Review required | Opened 2026-11-11, stacked on #6335; its diff shows #6335's commits until #6335 merges. Playwright SR preview screenshots may need updating |
+| #6421 | Review required | Opened 2026-11-11 on current master; tag browser item collapse fix only (the show-all search from IDC #158 is not offered upstream yet) |
 | #5858 | Closed | Replaced by #6335 and #6420 |
 | CS3D #2856 | Changes requested | Not ours (author: daker); conflicts with CS3D main. IDC keeps `@cornerstonejs__core.patch` |
 
@@ -295,6 +298,14 @@ Note: the IDC version uses `React.useMemo` in `SidePanelPreview.tsx`; the upstre
 | `extensions/cornerstone-dicom-sr/src/tools/modules/dicomSRModule.js` | `clearTrackingUniqueIdentifiersForElement` | #6354 |
 | `platform/app/public/config/*.js`, `idc-assets/app-config-template.js` | `onBeforeSRHydration` remaps Probe → SRPoint and RectangleROI → SRRectangleROI | IDC config |
 
+### 17. DICOM Tag Browser (`extensions/default/src/DicomTagBrowser/`)
+**Status:** IDC PR ImagingDataCommons/ViewersV3#158 open (issue ImagingDataCommons/ViewersV3#156); upstream PR [#6421](https://github.com/OHIF/Viewers/pull/6421) open for the collapse fix only
+
+| File | Purpose | Upstream PR |
+|------|---------|-------------|
+| `DicomTagBrowser.tsx`, `DicomTagTable.tsx` | Show-all search mode with match highlighting and navigation | Not offered yet |
+| `DicomTagBrowser.tsx` (`getFormattedRowsFromTags`), `getFormattedRowsFromTags.test.ts` | Item rows use their registered descendant list, so collapsing an "Item #n" hides its tags | #6421 |
+
 ---
 
 ## Verification Checklist
@@ -389,6 +400,11 @@ Note: the IDC version uses `React.useMemo` in `SidePanelPreview.tsx`; the upstre
    - Sync fork with upstream
    - Drop the IDC changes in `commandsModule.ts`, `DICOMSRDisplayTool.ts` and `dicomSRModule.js`
    - Keep the `onBeforeSRHydration` config entries; they are IDC configuration
+
+10. **When #6421 (tag browser item collapse) merges:**
+    - Sync fork with upstream
+    - Drop the IDC copy of the `getFormattedRowsFromTags` fix and its test (from #158) in favor of upstream's
+    - Keep the show-all search changes until they are offered and merged upstream
 
 ### Final Cleanup
 
