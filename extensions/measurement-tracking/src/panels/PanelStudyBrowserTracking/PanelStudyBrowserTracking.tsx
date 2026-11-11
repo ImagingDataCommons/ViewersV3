@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import { useSystem } from '@ohif/core';
 import { thumbnailNoImageModalities } from '@ohif/core/src/utils/thumbnailNoImageModalities';
 import PanelStudyBrowser from '@ohif/extension-default/src/Panels/StudyBrowser/PanelStudyBrowser';
+import getReferencedSeriesInstanceUIDs from '@ohif/extension-default/src/utils/getReferencedSeriesInstanceUIDs';
 import { UntrackSeriesModal } from './untrackSeriesModal';
 import { useTrackedMeasurements } from '../../getContextModule';
 
@@ -107,9 +108,9 @@ export default function PanelStudyBrowserTracking({
           },
           isTracked: trackedSeries.includes(ds.SeriesInstanceUID),
           isHydratedForDerivedDisplaySet: ds.isHydrated,
-          hasReferencedSeries: Boolean(
-            ds.referencedDisplaySetInstanceUID || ds.referencedSeriesInstanceUID
-          ),
+          hasReferencedSeries:
+            Boolean(ds.referencedDisplaySetInstanceUID) ||
+            getReferencedSeriesInstanceUIDs(ds, displaySets).length > 0,
         });
       });
 
