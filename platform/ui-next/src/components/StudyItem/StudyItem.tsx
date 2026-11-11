@@ -17,6 +17,7 @@ const StudyItem = ({
   displaySets,
   activeDisplaySetInstanceUIDs,
   applicableDisplaySetInstanceUIDs,
+  shownDisplaySetInstanceUIDs,
   onClickThumbnail,
   onDoubleClickThumbnail,
   onClickUntrack,
@@ -86,6 +87,7 @@ const StudyItem = ({
               thumbnails={displaySets}
               activeDisplaySetInstanceUIDs={activeDisplaySetInstanceUIDs}
               applicableDisplaySetInstanceUIDs={applicableDisplaySetInstanceUIDs}
+              shownDisplaySetInstanceUIDs={shownDisplaySetInstanceUIDs}
               onThumbnailClick={onClickThumbnail}
               onThumbnailDoubleClick={onDoubleClickThumbnail}
               onClickUntrack={onClickUntrack}
@@ -110,6 +112,7 @@ StudyItem.propTypes = {
   displaySets: PropTypes.array,
   activeDisplaySetInstanceUIDs: PropTypes.array,
   applicableDisplaySetInstanceUIDs: PropTypes.array,
+  shownDisplaySetInstanceUIDs: PropTypes.array,
   onClickThumbnail: PropTypes.func,
   onDoubleClickThumbnail: PropTypes.func,
   onClickUntrack: PropTypes.func,

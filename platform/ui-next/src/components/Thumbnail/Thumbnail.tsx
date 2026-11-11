@@ -70,6 +70,7 @@ const Thumbnail = ({
   isHydratedForDerivedDisplaySet = false,
   isTracked = false,
   isApplicableToActiveViewport = false,
+  isShownInActiveViewport = false,
   hasReferencedSeries = false,
   canReject = false,
   dragData = {},
@@ -108,7 +109,8 @@ const Thumbnail = ({
       <div
         className={classnames(
           'flex h-full w-full flex-col items-center justify-center gap-[2px] p-[4px]',
-          isActive && 'bg-popover rounded'
+          isActive && !isShownInActiveViewport && 'bg-popover rounded',
+          isShownInActiveViewport && 'bg-accent rounded'
         )}
       >
         <div className="h-[114px] w-[128px]">
@@ -133,7 +135,11 @@ const Thumbnail = ({
               <div
                 className={classnames(
                   'h-[10px] w-[10px] rounded-[2px]',
-                  isActive || isHydratedForDerivedDisplaySet ? 'bg-highlight' : 'bg-primary/65',
+                  isShownInActiveViewport
+                    ? 'bg-green-500'
+                    : isActive || isHydratedForDerivedDisplaySet
+                      ? 'bg-highlight'
+                      : 'bg-primary/65',
                   loadingProgress && loadingProgress < 1 && 'bg-primary/25'
                 )}
               ></div>
@@ -227,14 +233,19 @@ const Thumbnail = ({
       <div
         className={classnames(
           'flex h-full w-full items-center justify-between pr-[8px] pl-[8px] pt-[4px] pb-[4px]',
-          isActive && 'bg-popover rounded'
+          isActive && !isShownInActiveViewport && 'bg-popover rounded',
+          isShownInActiveViewport && 'bg-accent rounded'
         )}
       >
         <div className="relative flex h-[32px] w-full items-center gap-[8px] overflow-hidden">
           <div
             className={classnames(
               'h-[32px] w-[4px] min-w-[4px] rounded',
-              isActive || isHydratedForDerivedDisplaySet ? 'bg-highlight' : 'bg-primary/65',
+              isShownInActiveViewport
+                ? 'bg-green-500'
+                : isActive || isHydratedForDerivedDisplaySet
+                  ? 'bg-highlight'
+                  : 'bg-primary/65',
               loadingProgress && loadingProgress < 1 && 'bg-primary/25'
             )}
           ></div>
@@ -339,6 +350,7 @@ const Thumbnail = ({
       }
       data-series={seriesNumber}
       data-applicable={hasReferencedSeries ? String(isApplicableToActiveViewport) : undefined}
+      data-shown={isShownInActiveViewport ? 'true' : undefined}
       onClick={onClick}
       onDoubleClick={onDoubleClick}
       onTouchEnd={handleTouchEnd}
@@ -390,6 +402,8 @@ Thumbnail.propTypes = {
   isTracked: PropTypes.bool,
   /** True when this derived display set references a series in the active viewport */
   isApplicableToActiveViewport: PropTypes.bool,
+  /** True when this derived display set is shown as a segmentation on the active viewport */
+  isShownInActiveViewport: PropTypes.bool,
   /** True when this display set references another series (SEG, RTSTRUCT, ...) */
   hasReferencedSeries: PropTypes.bool,
   onClickUntrack: PropTypes.func,

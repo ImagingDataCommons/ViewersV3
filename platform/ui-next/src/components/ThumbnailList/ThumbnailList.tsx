@@ -11,6 +11,7 @@ const ThumbnailList = ({
   onClickUntrack,
   activeDisplaySetInstanceUIDs = [],
   applicableDisplaySetInstanceUIDs = [],
+  shownDisplaySetInstanceUIDs = [],
   viewPreset,
   ThumbnailMenuItems,
 }) => {
@@ -43,6 +44,8 @@ const ThumbnailList = ({
               const isActive = activeDisplaySetInstanceUIDs.includes(displaySetInstanceUID);
               const isApplicableToActiveViewport =
                 applicableDisplaySetInstanceUIDs.includes(displaySetInstanceUID);
+              const isShownInActiveViewport =
+                shownDisplaySetInstanceUIDs.includes(displaySetInstanceUID);
               return (
                 <Thumbnail
                   key={displaySetInstanceUID}
@@ -51,6 +54,7 @@ const ThumbnailList = ({
                   numInstances={numInstances || 1}
                   isActive={isActive}
                   isApplicableToActiveViewport={isApplicableToActiveViewport}
+                  isShownInActiveViewport={isShownInActiveViewport}
                   thumbnailType={componentType}
                   viewPreset="thumbnails"
                   onClick={onThumbnailClick.bind(null, displaySetInstanceUID)}
@@ -73,6 +77,8 @@ const ThumbnailList = ({
               const isActive = activeDisplaySetInstanceUIDs.includes(displaySetInstanceUID);
               const isApplicableToActiveViewport =
                 applicableDisplaySetInstanceUIDs.includes(displaySetInstanceUID);
+              const isShownInActiveViewport =
+                shownDisplaySetInstanceUIDs.includes(displaySetInstanceUID);
               return (
                 <Thumbnail
                   key={displaySetInstanceUID}
@@ -81,6 +87,7 @@ const ThumbnailList = ({
                   numInstances={numInstances || 1}
                   isActive={isActive}
                   isApplicableToActiveViewport={isApplicableToActiveViewport}
+                  isShownInActiveViewport={isShownInActiveViewport}
                   thumbnailType={componentType}
                   viewPreset="list"
                   onClick={onThumbnailClick.bind(null, displaySetInstanceUID)}
@@ -125,6 +132,7 @@ ThumbnailList.propTypes = {
   ),
   activeDisplaySetInstanceUIDs: PropTypes.arrayOf(PropTypes.string),
   applicableDisplaySetInstanceUIDs: PropTypes.arrayOf(PropTypes.string),
+  shownDisplaySetInstanceUIDs: PropTypes.arrayOf(PropTypes.string),
   onThumbnailClick: PropTypes.func.isRequired,
   onThumbnailDoubleClick: PropTypes.func.isRequired,
   onClickUntrack: PropTypes.func.isRequired,
