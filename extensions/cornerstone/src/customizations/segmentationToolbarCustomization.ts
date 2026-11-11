@@ -902,6 +902,7 @@ export const segmentationModeToolbarSections: Record<string, string[]> = {
     'Zoom',
     'TrackballRotate',
     'Capture',
+    'Mode',
     'Layout',
     'Crosshairs',
     'MoreTools',
