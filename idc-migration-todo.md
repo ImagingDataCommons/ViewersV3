@@ -19,6 +19,7 @@ This document tracks the migration status and documents all IDC-specific changes
 | GCP Extension | ✅ Updated for OHIF 3.13 |
 | GCP Mode | ✅ Updated for OHIF 3.13 |
 | SEG Loading | ✅ Buffer-based fallback + PR opened |
+| Study List Workflows | ✅ Fixed for servers without ModalitiesInStudy + PR open |
 
 ---
 
@@ -32,13 +33,14 @@ This document tracks the migration status and documents all IDC-specific changes
 | [#6331](https://github.com/OHIF/Viewers/pull/6331) | fix(MergeDataSource): improve series-to-datasource routing | 🟡 OPEN | seriesSourceMap + retrieve.series.metadata tagging |
 | [#6333](https://github.com/OHIF/Viewers/pull/6333) | fix(seg): fallback to buffer-based loader when PerFrameFunctionalGroupsSequence is missing | 🟡 OPEN | SEG metadata fallback + bulk data fetch |
 | [#6335](https://github.com/OHIF/Viewers/pull/6335) | feat(cornerstone-dicom-sr): add SRPoint tool | 🟡 OPEN | SRPointTool for DICOM SR point annotations |
+| [#6419](https://github.com/OHIF/Viewers/pull/6419) | fix(worklist): show launch workflows when the server omits modalities | 🟡 OPEN | Study list workflows when ModalitiesInStudy is missing (IDC: ImagingDataCommons/ViewersV3#164) |
 
 ### Cornerstone3D PRs
 
 | PR | Title | Status | Description |
 |----|-------|--------|-------------|
 | [#2856](https://github.com/cornerstonejs/cornerstone3D/pull/2856) | feat(voi): VOI LUT Function and VOI LUT Sequence support | 🟡 OPEN | VOI LUT validation - IDC has patch |
-| [#2882](https://github.com/cornerstonejs/cornerstone3D/pull/2882) | fix(adapters): Index segments by SegmentNumber | Referenced | LABELMAP support - IDC has patch |
+| [#2882](https://github.com/cornerstonejs/cornerstone3D/pull/2882) | fix(adapters): Index segments by SegmentNumber | 🟢 MERGED (2026-09-01, first in v5.8.7) | LABELMAP support - IDC keeps the patch while on 5.6.8 |
 | [#2963](https://github.com/cornerstonejs/cornerstone3D/pull/2963) | fix(adapters): add null checks for PerFrameFunctionalGroupsSequence | 🔴 CLOSED | Replaced by buffer-based loader approach |
 
 ---
@@ -99,6 +101,15 @@ Located in `patches/` directory:
 | `src/customizations/modeSelectorCustomization.types.ts` | TypeScript types |
 | `src/getToolbarModule.tsx` | Toolbar registration (modified) |
 | `src/getHangingProtocolModule.js` | HP module (modified) |
+
+**IDC-only follow-ups (not in #5987):**
+
+- The OHIF 3.13 upgrade (ImagingDataCommons/ViewersV3#140) dropped `'Mode'` from the primary toolbar sections when toolbar layouts moved into customization packs. ImagingDataCommons/ViewersV3#163 restored it in:
+  - `extensions/cornerstone/src/customizations/toolbarButtonsCustomization.ts` (basic / longitudinal)
+  - `extensions/cornerstone/src/customizations/segmentationToolbarCustomization.ts`
+  - `extensions/tmtv/src/customizations/toolbarCustomization.ts`
+  - `modes/basic-test-mode/src/index.ts`
+- The selector icon changed from `icon-list-view` to a new `icon-mode-switch`, because the old one looked like the DICOM tag browser icon (review comment on #5987). Files: `platform/ui-next/src/components/Icons/Sources/ModeSwitch.tsx`, `platform/ui-next/src/components/Icons/Icons.tsx`, `extensions/default/src/Toolbar/ToolbarModeSelector.tsx`. #5987 still uses `icon-list-view`.
 
 ### 3. SRPointTool (`extensions/cornerstone-dicom-sr/`)
 **Status:** PR [#6335](https://github.com/OHIF/Viewers/pull/6335) open
@@ -234,6 +245,18 @@ Located in `patches/` directory:
 | `modes/usAnnotation/src/initToolGroups.js` | US annotation tool groups |
 | `modes/usAnnotation/src/index.ts` | US annotation mode |
 
+### 15. Study List Workflows Without ModalitiesInStudy (`platform/ui-next/`, `platform/app/`)
+**Status:** IDC fix in ImagingDataCommons/ViewersV3#164; upstream PR [#6419](https://github.com/OHIF/Viewers/pull/6419) open
+
+Google Healthcare DICOMweb does not return `ModalitiesInStudy`, so the new study list hid every workflow (empty "Launch workflow", empty row menu, double-click did nothing).
+
+| File | Purpose |
+|------|---------|
+| `platform/ui-next/src/components/StudyList/components/WorkflowsProvider.tsx` | Treat empty modalities as unknown instead of not applicable |
+| `platform/app/src/routes/WorkList/SidePanelPreview.tsx` | Derive the selected study's modalities from its fetched series |
+
+Note: the IDC version uses `React.useMemo` in `SidePanelPreview.tsx`; the upstream version is a plain expression because upstream builds with the React Compiler, which disallows adding `useMemo`.
+
 ---
 
 ## Verification Checklist
@@ -291,6 +314,8 @@ Located in `patches/` directory:
    - Sync fork with upstream
    - Remove IDC-specific ToolbarModeSelector files
    - Keep only i18n customizations if any
+   - Check that `'Mode'` is in the primary toolbar sections (basic, segmentation, tmtv); keep the IDC entries if upstream does not add them
+   - Keep the IDC `icon-mode-switch` icon unless upstream adopts a distinct icon
 
 2. **When #6331 (MergeDataSource) merges:**
    - Sync fork with upstream
@@ -308,9 +333,13 @@ Located in `patches/` directory:
    - Update Cornerstone3D version
    - Remove `@cornerstonejs__core.patch`
 
-6. **When CS3D #2882 (LABELMAP) merges:**
-   - Update Cornerstone3D version
-   - Remove `@cornerstonejs__adapters.patch`
+6. **CS3D #2882 (LABELMAP) merged 2026-09-01, first released in v5.8.7:**
+   - When IDC moves to Cornerstone3D v5.8.7 or later, remove `@cornerstonejs__adapters.patch`
+   - Check that the patch has no other changes before removing it
+
+7. **When #6419 (study list workflows without ModalitiesInStudy) merges:**
+   - Sync fork with upstream
+   - Drop the IDC changes in `WorkflowsProvider.tsx` and `SidePanelPreview.tsx` (ImagingDataCommons/ViewersV3#164) in favor of upstream's
 
 ### Final Cleanup
 
