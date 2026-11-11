@@ -28,6 +28,7 @@ import JumpToSlice from './Sources/JumpToSlice';
 import ListView from './Sources/ListView';
 import LoadingSpinner from './Sources/LoadingSpinner';
 import Lock from './Sources/Lock';
+import ModeSwitch from './Sources/ModeSwitch';
 import Minus from './Sources/Minus';
 import MissingIcon from './Sources/MissingIcon';
 import More from './Sources/More';
@@ -514,6 +515,7 @@ export const Icons = {
   Lock,
   Minus,
   MissingIcon,
+  ModeSwitch,
   More,
   MultiplePatients,
   NavigationPanelReveal,
@@ -800,6 +802,7 @@ export const Icons = {
   'layout-common-2x3': (props: IconProps) => LayoutCommon2x3(props),
   pencil: (props: IconProps) => Pencil(props),
   'icon-list-view': (props: IconProps) => ListView(props),
+  'icon-mode-switch': (props: IconProps) => ModeSwitch(props),
   'chevron-menu': 'chevron-down',
   'icon-status-alert': (props: IconProps) => Alert(props),
   'info-link': (props: IconProps) => InfoLink(props),

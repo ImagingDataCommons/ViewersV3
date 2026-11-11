@@ -247,7 +247,7 @@ function ToolbarModeSelector({ commandsManager: _commandsManager, servicesManage
               data-cy="mode-selector-trigger"
             >
               <Icons.ByName
-                name="icon-list-view"
+                name="icon-mode-switch"
                 className="text-muted-foreground h-7 w-7"
               />
             </Button>
@@ -289,7 +289,7 @@ function ToolbarModeSelector({ commandsManager: _commandsManager, servicesManage
               data-cy="mode-selector-trigger"
             >
               <Icons.ByName
-                name="icon-list-view"
+                name="icon-mode-switch"
                 className="h-7 w-7"
               />
             </Button>
