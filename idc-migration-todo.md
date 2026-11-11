@@ -44,13 +44,13 @@ Not tracked here: #6392 and #6393 are upstream-only fixes that the IDC fork does
 
 ### Upstream PR Health (checked 2026-11-11)
 
-All open OHIF PRs above merge cleanly into OHIF `master` and pass master's lint and React Compiler gates.
+All open OHIF PRs above merge cleanly into OHIF `master` and pass master's lint and React Compiler gates. On 2026-11-11 every one of them was brought up to date with `master` (or opened on it); at the time of this check no CI job had failed, and Playwright was still running on most of them.
 
 | PR | Review | Notes |
 |----|--------|-------|
-| #5987 | Changes requested (2026-04-29) | Branch brought up to date with master; fixed the build (`preserveKeys` import), moved `ToolbarModeSelector` to React 19 / React Compiler rules, added the series-search modality fallback. Re-request review once CI is green |
-| #6331, #6333, #6353, #6354 | Review required | Up to date with master; CI green |
-| #6335 | Review required | Up to date with master; earlier Playwright failure was in unrelated screenshot tests |
+| #5987 | Changes requested (2026-04-29) | Up to date with master; all CI green, including the build and the Netlify preview that were failing before (`preserveKeys` import). `ToolbarModeSelector` moved to React 19 / React Compiler rules; series-search modality fallback added. Next: re-request review from the reviewer who requested changes |
+| #6331, #6333, #6353, #6354 | Review required | Up to date with master; no CI failures, Playwright rerunning |
+| #6335 | Review required | Up to date with master; Playwright rerunning (the earlier failure was in unrelated screenshot tests) |
 | #6419 | Review required | Opened 2026-11-11 on current master |
 | #6420 | Review required | Opened 2026-11-11, stacked on #6335; its diff shows #6335's commits until #6335 merges. Playwright SR preview screenshots may need updating |
 | #5858 | Closed | Replaced by #6335 and #6420 |
@@ -123,15 +123,17 @@ Located in `patches/` directory:
 | `src/getToolbarModule.tsx` | Toolbar registration (modified) |
 | `src/getHangingProtocolModule.js` | HP module (modified) |
 
-**IDC-only follow-ups (not in #5987):**
+**IDC follow-ups to #5987:**
 
-- The OHIF 3.13 upgrade (ImagingDataCommons/ViewersV3#140) dropped `'Mode'` from the primary toolbar sections when toolbar layouts moved into customization packs. ImagingDataCommons/ViewersV3#163 restored it in:
+- (Now also in #5987.) The OHIF 3.13 upgrade (ImagingDataCommons/ViewersV3#140) dropped `'Mode'` from the primary toolbar sections when toolbar layouts moved into customization packs. ImagingDataCommons/ViewersV3#163 restored it in:
   - `extensions/cornerstone/src/customizations/toolbarButtonsCustomization.ts` (basic / longitudinal)
   - `extensions/cornerstone/src/customizations/segmentationToolbarCustomization.ts`
   - `extensions/tmtv/src/customizations/toolbarCustomization.ts`
   - `modes/basic-test-mode/src/index.ts`
-- Mode validity when the server omits `ModalitiesInStudy` (ImagingDataCommons/ViewersV3#166): `resolveStudyModalities` in `src/utils/modeSelectorUtils.ts` uses the union of series already loaded in `DicomMetadataStore` and the series search. Before, with lazy study loading it saw only the first loaded series and disabled TMTV for PET/CT studies. #5987 has no series-search fallback at all yet; the port to #5987 is in progress.
-- The selector icon changed from `icon-list-view` to a new `icon-mode-switch`, because the old one looked like the DICOM tag browser icon (review comment on #5987). Files: `platform/ui-next/src/components/Icons/Sources/ModeSwitch.tsx`, `platform/ui-next/src/components/Icons/Icons.tsx`, `extensions/default/src/Toolbar/ToolbarModeSelector.tsx`. #5987 still uses `icon-list-view`.
+
+  #5987 adds `'Mode'` to the same primary sections, so these IDC entries go away with the sync.
+- (Now also in #5987.) Mode validity when the server omits `ModalitiesInStudy` (ImagingDataCommons/ViewersV3#166): `resolveStudyModalities` in `src/utils/modeSelectorUtils.ts` uses the union of series already loaded in `DicomMetadataStore` and the series search. Before, with lazy study loading it saw only the first loaded series and disabled TMTV for PET/CT studies. #5987 has the same fallback since 2026-11-11.
+- (IDC only.) The selector icon changed from `icon-list-view` to a new `icon-mode-switch`, because the old one looked like the DICOM tag browser icon (review comment on #5987). Files: `platform/ui-next/src/components/Icons/Sources/ModeSwitch.tsx`, `platform/ui-next/src/components/Icons/Icons.tsx`, `extensions/default/src/Toolbar/ToolbarModeSelector.tsx`. #5987 still uses `icon-list-view`.
 
 ### 3. SRPointTool and SR Finding Labels (`extensions/cornerstone-dicom-sr/`, `modes/`)
 **Status:** PR [#6335](https://github.com/OHIF/Viewers/pull/6335) open; [#6420](https://github.com/OHIF/Viewers/pull/6420) (stacked on #6335) for the rest
@@ -350,7 +352,7 @@ Note: the IDC version uses `React.useMemo` in `SidePanelPreview.tsx`; the upstre
    - Sync fork with upstream
    - Remove IDC-specific ToolbarModeSelector files
    - Keep only i18n customizations if any
-   - Check that `'Mode'` is in the primary toolbar sections (basic, segmentation, tmtv); keep the IDC entries if upstream does not add them
+   - `'Mode'` in the primary toolbar sections (basic, segmentation, tmtv, basic-test) comes with #5987; drop the IDC entries in favor of upstream's
    - Keep the IDC `icon-mode-switch` icon unless upstream adopts a distinct icon
    - #5987 now carries the series-search modality fallback (IDC #166), so the IDC `resolveStudyModalities` can go with the rest of the mode selector files
 
