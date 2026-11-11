@@ -295,7 +295,7 @@ function getMatchingRows(rows: Row[], filterValue: string): Row[] {
   );
 }
 
-function getFormattedRowsFromTags({ tags, metadata }) {
+export function getFormattedRowsFromTags({ tags, metadata }) {
   const rows: Row[] = [];
   const stack = [{ tags, depth: 0, parents: null, index: 0, children: [] }];
   const parentChildMap = new Map();
@@ -390,7 +390,12 @@ function getFormattedRowsFromTags({ tags, metadata }) {
         rows.push(row);
         if (row.tag === '(FFFE,E000)') {
           row.areChildrenVisible = true;
-          row.children = [];
+          /**
+           * Use the list the item's descendants were registered in, so
+           * collapsing an item hides its tags (a new empty array left them
+           * visible).
+           */
+          row.children = parentChildMap.get(uid) ?? [];
         }
       }
     }
